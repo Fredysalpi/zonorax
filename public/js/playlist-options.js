@@ -1,82 +1,51 @@
 // ===== OPCIONES DE PLAYLIST =====
-window.togglePlaylistOptions = function(event, playlistId) {
+window.togglePlaylistOptions = function (event, playlistId) {
     event.stopPropagation();
-    
+
     // Crear modal de opciones
     const modal = document.createElement('div');
     modal.id = 'playlist-options-modal';
-    modal.style.cssText = `
-position: fixed;
-top: 0;
-left: 0;
-right: 0;
-bottom: 0;
-background: rgba(0, 0, 0, 0.7);
-display: flex;
-align - items: center;
-justify - content: center;
-z - index: 10000;
-`;
-    
-    modal.innerHTML = `
-    < div style = "
-background: var(--bg - elevated);
-border - radius: 8px;
-min - width: 200px;
-box - shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
-overflow: hidden;
-">
-    < button onclick = "editPlaylist(${playlistId}); document.getElementById('playlist-options-modal').remove();" style = "
-width: 100 %;
-padding: 16px 24px;
-background: none;
-border: none;
-border - bottom: 1px solid var(--border - subtle);
-color: var(--text - base);
-text - align: left;
-cursor: pointer;
-font - size: 16px;
-display: flex;
-align - items: center;
-gap: 12px;
-transition: background 0.2s;
-" onmouseover="this.style.background = 'rgba(255,255,255,0.1)'" onmouseout="this.style.background = 'none'">
-    < svg viewBox = "0 0 16 16" width = "16" height = "16" >
-        <path d="M11.013 1.427a1.75 1.75 0 0 1 2.474 0l1.086 1.086a1.75 1.75 0 0 1 0 2.474l-8.61 8.61c-.21.21-.47.364-.756.445l-3.251.93a.75.75 0 0 1-.927-.928l.929-3.25a1.75 1.75 0 0 1 .445-.758l8.61-8.61zm1.414 1.06a.25.25 0 0 0-.354 0L10.811 3.75l1.439 1.44 1.263-1.263a.25.25 0 0 0 0-.354l-1.086-1.086zM11.189 6.25L9.75 4.81l-6.286 6.287a.25.25 0 0 0-.064.108l-.558 1.953 1.953-.558a.249.249 0 0 0 .108-.064l6.286-6.286z" fill="currentColor" />
-                </svg >
-    Editar
-            </button >
-    <button onclick="deletePlaylist(${playlistId}); document.getElementById('playlist-options-modal').remove();" style="
-                width: 100%;
-                padding: 16px 24px;
-                background: none;
-                border: none;
-                color: #ff4444;
-                text-align: left;
-                cursor: pointer;
-                font-size: 16px;
-                display: flex;
-                align-items: center;
-                gap: 12px;
-                transition: background 0.2s;
-            " onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='none'">
-        <svg viewBox="0 0 16 16" width="16" height="16">
-            <path d="M11 1.75V3h2.25a.75.75 0 0 1 0 1.5H2.75a.75.75 0 0 1 0-1.5H5V1.75C5 .784 5.784 0 6.75 0h2.5C10.216 0 11 .784 11 1.75zM4.496 6.675a.75.75 0 1 0-1.492.15l.66 6.6A1.75 1.75 0 0 0 5.405 15h5.19c.9 0 1.652-.681 1.741-1.576l.66-6.6a.75.75 0 0 0-1.492-.149l-.66 6.6a.25.25 0 0 1-.249.225h-5.19a.25.25 0 0 1-.249-.225l-.66-6.6z" fill="currentColor" />
-        </svg>
-        Eliminar
-    </button>
-        </div >
-    `;
-    
+    modal.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.7); display: flex; align-items: center; justify-content: center; z-index: 10000;';
+
+    // Crear contenedor del modal
+    const container = document.createElement('div');
+    container.style.cssText = 'background: var(--bg-elevated); border-radius: 8px; min-width: 200px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); overflow: hidden;';
+
+    // Botón Editar
+    const editBtn = document.createElement('button');
+    editBtn.style.cssText = 'width: 100%; padding: 16px 24px; background: none; border: none; border-bottom: 1px solid var(--border-subtle); color: var(--text-base); text-align: left; cursor: pointer; font-size: 16px; display: flex; align-items: center; gap: 12px; transition: background 0.2s;';
+    editBtn.innerHTML = '<svg viewBox="0 0 16 16" width="16" height="16"><path d="M11.013 1.427a1.75 1.75 0 0 1 2.474 0l1.086 1.086a1.75 1.75 0 0 1 0 2.474l-8.61 8.61c-.21.21-.47.364-.756.445l-3.251.93a.75.75 0 0 1-.927-.928l.929-3.25a1.75 1.75 0 0 1 .445-.758l8.61-8.61zm1.414 1.06a.25.25 0 0 0-.354 0L10.811 3.75l1.439 1.44 1.263-1.263a.25.25 0 0 0 0-.354l-1.086-1.086zM11.189 6.25L9.75 4.81l-6.286 6.287a.25.25 0 0 0-.064.108l-.558 1.953 1.953-.558a.249.249 0 0 0 .108-.064l6.286-6.286z" fill="currentColor"/></svg> Editar';
+    editBtn.onmouseover = function () { this.style.background = 'rgba(255,255,255,0.1)'; };
+    editBtn.onmouseout = function () { this.style.background = 'none'; };
+    editBtn.onclick = function () {
+        modal.remove();
+        editPlaylist(playlistId);
+    };
+
+    // Botón Eliminar
+    const deleteBtn = document.createElement('button');
+    deleteBtn.style.cssText = 'width: 100%; padding: 16px 24px; background: none; border: none; color: #ff4444; text-align: left; cursor: pointer; font-size: 16px; display: flex; align-items: center; gap: 12px; transition: background 0.2s;';
+    deleteBtn.innerHTML = '<svg viewBox="0 0 16 16" width="16" height="16"><path d="M11 1.75V3h2.25a.75.75 0 0 1 0 1.5H2.75a.75.75 0 0 1 0-1.5H5V1.75C5 .784 5.784 0 6.75 0h2.5C10.216 0 11 .784 11 1.75zM4.496 6.675a.75.75 0 1 0-1.492.15l.66 6.6A1.75 1.75 0 0 0 5.405 15h5.19c.9 0 1.652-.681 1.741-1.576l.66-6.6a.75.75 0 0 0-1.492-.149l-.66 6.6a.25.25 0 0 1-.249.225h-5.19a.25.25 0 0 1-.249-.225l-.66-6.6z" fill="currentColor"/></svg> Eliminar';
+    deleteBtn.onmouseover = function () { this.style.background = 'rgba(255,255,255,0.1)'; };
+    deleteBtn.onmouseout = function () { this.style.background = 'none'; };
+    deleteBtn.onclick = function () {
+        modal.remove();
+        deletePlaylist(playlistId);
+    };
+
+    // Ensamblar modal
+    container.appendChild(editBtn);
+    container.appendChild(deleteBtn);
+    modal.appendChild(container);
     document.body.appendChild(modal);
-    
+
     // Cerrar al hacer clic fuera
     modal.addEventListener('click', (e) => {
         if (e.target === modal) {
             modal.remove();
         }
     });
-    
+
     // Cerrar con ESC
     const handleEsc = (e) => {
         if (e.key === 'Escape') {
@@ -89,44 +58,41 @@ transition: background 0.2s;
 
 
 window.editPlaylist = async function (playlistId) {
-    // Cerrar popup de opciones
-    document.getElementById('playlist-options-popup').style.display = 'none';
-
     try {
         // Obtener datos actuales de la playlist
-        const response = await fetch(`${ API_BASE_URL } /playlists/${ playlistId } `);
+        const response = await fetch(`${API_BASE_URL}/playlists/${playlistId}`);
         const playlist = await response.json();
 
         // Crear modal de edición
         const modal = document.createElement('div');
         modal.id = 'edit-playlist-modal';
         modal.style.cssText = `
-position: fixed;
-top: 0;
-left: 0;
-right: 0;
-bottom: 0;
-background: rgba(0, 0, 0, 0.8);
-display: flex;
-align - items: center;
-justify - content: center;
-z - index: 10000;
-`;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+        `;
 
         modal.innerHTML = `
-    < div style = "
-background: var(--bg - elevated);
-border - radius: 8px;
-padding: 32px;
-max - width: 600px;
-width: 90 %;
-box - shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
-max - height: 90vh;
-overflow - y: auto;
-">
-    < h2 style = "font-size: 24px; font-weight: 700; margin-bottom: 24px; color: var(--text-base);" > Editar playlist</h2 >
+            <div style="
+                background: var(--bg-elevated);
+                border-radius: 8px;
+                padding: 32px;
+                max-width: 600px;
+                width: 90%;
+                box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+                max-height: 90vh;
+                overflow-y: auto;
+            ">
+                <h2 style="font-size: 24px; font-weight: 700; margin-bottom: 24px; color: var(--text-base);">Editar playlist</h2>
                 
-                < !--Imagen de portada-- >
+                <!-- Imagen de portada -->
                 <div style="margin-bottom: 24px;">
                     <label style="display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px; color: var(--text-base);">Imagen de portada</label>
                     <div style="display: flex; align-items: center; gap: 16px;">
@@ -164,7 +130,7 @@ overflow - y: auto;
                     </div>
                 </div>
                 
-                <!--Nombre -->
+                <!-- Nombre -->
                 <div style="margin-bottom: 24px;">
                     <label style="display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px; color: var(--text-base);">Nombre</label>
                     <input type="text" id="edit-playlist-name" value="${playlist.name}" style="
@@ -178,7 +144,7 @@ overflow - y: auto;
                     ">
                 </div>
                 
-                <!--Descripción -->
+                <!-- Descripción -->
                 <div style="margin-bottom: 24px;">
                     <label style="display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px; color: var(--text-base);">Descripción</label>
                     <textarea id="edit-playlist-description" style="
@@ -194,7 +160,7 @@ overflow - y: auto;
                     ">${playlist.description || ''}</textarea>
                 </div>
                 
-                <!--Pública -->
+                <!-- Pública -->
                 <div style="margin-bottom: 24px;">
                     <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
                         <input type="checkbox" id="edit-playlist-public" ${playlist.is_public ? 'checked' : ''} style="width: 16px; height: 16px; cursor: pointer;">
@@ -224,8 +190,8 @@ overflow - y: auto;
                         cursor: pointer;
                     ">Guardar cambios</button>
                 </div>
-            </div >
-    `;
+            </div>
+        `;
 
         document.body.appendChild(modal);
 
@@ -248,7 +214,7 @@ overflow - y: auto;
 
                 const reader = new FileReader();
                 reader.onload = function (e) {
-                    coverPreview.innerHTML = `< img src = "${e.target.result}" style = "width: 100%; height: 100%; object-fit: cover;" > `;
+                    coverPreview.innerHTML = `<img src="${e.target.result}" style="width: 100%; height: 100%; object-fit: cover;">`;
                     window.tempPlaylistCoverFile = file;
                 };
                 reader.readAsDataURL(file);
@@ -292,11 +258,11 @@ async function updatePlaylistData(playlistId) {
         const token = localStorage.getItem('authToken');
 
         // Actualizar datos básicos
-        const response = await fetch(`${ API_BASE_URL } /playlists/${ playlistId } `, {
+        const response = await fetch(`${API_BASE_URL}/playlists/${playlistId}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${ token } `
+                'Authorization': `Bearer ${token}`
             },
             body: JSON.stringify({
                 name,
@@ -314,33 +280,30 @@ async function updatePlaylistData(playlistId) {
             const formData = new FormData();
             formData.append('cover', window.tempPlaylistCoverFile);
 
-            await fetch(`${ API_BASE_URL } /playlists/${ playlistId }/cover`, {
-method: 'POST',
-    headers: {
-    'Authorization': `Bearer ${token}`
-},
-body: formData
+            await fetch(`${API_BASE_URL}/playlists/${playlistId}/cover`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                },
+                body: formData
             });
 
-delete window.tempPlaylistCoverFile;
+            delete window.tempPlaylistCoverFile;
         }
 
-alert('✅ Playlist actualizada correctamente');
+        alert('✅ Playlist actualizada correctamente');
 
-// Recargar playlists y vista actual
-await loadPlaylists();
-await loadPlaylistSongs(playlistId);
+        // Recargar playlists y vista actual
+        await loadPlaylists();
+        await loadPlaylistSongs(playlistId);
 
     } catch (error) {
-    console.error('Error updating playlist:', error);
-    alert('❌ Error al actualizar la playlist: ' + error.message);
-}
+        console.error('Error updating playlist:', error);
+        alert('❌ Error al actualizar la playlist: ' + error.message);
+    }
 }
 
 window.deletePlaylist = async function (playlistId) {
-    // Cerrar popup de opciones
-    document.getElementById('playlist-options-popup').style.display = 'none';
-
     if (!confirm('¿Estás seguro de que deseas eliminar esta playlist? Esta acción no se puede deshacer.')) {
         return;
     }
