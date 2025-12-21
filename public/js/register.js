@@ -13,6 +13,9 @@ registerForm.addEventListener('submit', async (e) => {
     successMessage.style.display = 'none';
 
     const username = document.getElementById('username').value.trim();
+    const firstName = document.getElementById('first-name').value.trim();
+    const lastName = document.getElementById('last-name').value.trim();
+    const phone = document.getElementById('phone').value.trim();
     const email = document.getElementById('email').value.trim();
     const password = document.getElementById('password').value;
     const passwordConfirm = document.getElementById('password-confirm').value;
@@ -34,6 +37,11 @@ registerForm.addEventListener('submit', async (e) => {
         return;
     }
 
+    if (!validatePhone(phone)) {
+        showError('El teléfono debe tener exactamente 9 dígitos');
+        return;
+    }
+
     // Deshabilitar botón
     registerBtn.disabled = true;
     registerBtn.textContent = 'Creando cuenta...';
@@ -46,6 +54,9 @@ registerForm.addEventListener('submit', async (e) => {
             },
             body: JSON.stringify({
                 username,
+                first_name: firstName,
+                last_name: lastName,
+                phone,
                 email,
                 password,
                 role: isAdmin ? 'admin' : 'user'
@@ -62,7 +73,9 @@ registerForm.addEventListener('submit', async (e) => {
         successMessage.innerHTML = `
             <strong>¡Cuenta creada exitosamente!</strong><br>
             Usuario: ${username}<br>
+            Nombre: ${firstName} ${lastName}<br>
             Email: ${email}<br>
+            Teléfono: ${phone}<br>
             Rol: ${isAdmin ? 'Administrador' : 'Usuario'}<br><br>
             Redirigiendo al login...
         `;
@@ -88,6 +101,11 @@ function showError(message) {
 function validateEmail(email) {
     const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return re.test(email);
+}
+
+function validatePhone(phone) {
+    const re = /^[0-9]{9}$/;
+    return re.test(phone);
 }
 
 // Verificar si ya está autenticado

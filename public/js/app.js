@@ -538,6 +538,51 @@ function toggleRepeat() {
     }
 }
 
+// ===== GENERAR AVATAR DE USUARIO =====
+function generateUserAvatar() {
+    const token = localStorage.getItem('authToken');
+    let username = 'Usuario';
+
+    if (token) {
+        try {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            username = payload.username || 'Usuario';
+        } catch (e) {
+            console.error('Error parsing token:', e);
+        }
+    }
+
+    const userInitial = document.getElementById('user-initial');
+    const userMenuBtn = document.getElementById('user-menu-btn');
+    const userMenuPopup = document.getElementById('user-menu-popup');
+    const profileImage = localStorage.getItem('profileImage');
+
+    if (userMenuBtn) {
+        // Si hay imagen de perfil guardada, mostrarla
+        if (profileImage) {
+            userMenuBtn.style.background = 'none';
+            userMenuBtn.style.padding = '0';
+            userMenuBtn.innerHTML = `<img src="${profileImage}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
+        } else if (userInitial) {
+            // Si no hay imagen, mostrar la inicial
+            userInitial.textContent = username.charAt(0).toUpperCase();
+        }
+    }
+
+    if (userMenuBtn && userMenuPopup) {
+        userMenuBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            userMenuPopup.style.display = userMenuPopup.style.display === 'none' ? 'block' : 'none';
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!userMenuPopup.contains(e.target) && e.target !== userMenuBtn) {
+                userMenuPopup.style.display = 'none';
+            }
+        });
+    }
+}
+
 // ===== EVENT LISTENERS =====
 function initializeEventListeners() {
     playPauseBtn.addEventListener('click', togglePlayPause);
@@ -1048,43 +1093,9 @@ function initializeEventListeners() {
         return gradients[Math.floor(Math.random() * gradients.length)];
     }
 
-    function generateUserAvatar() {
-        const token = localStorage.getItem('authToken');
-        let username = 'Usuario';
-
-        if (token) {
-            try {
-                const payload = JSON.parse(atob(token.split('.')[1]));
-                username = payload.username || 'Usuario';
-            } catch (e) {
-                console.error('Error parsing token:', e);
-            }
-        }
-
-        const userInitial = document.getElementById('user-initial');
-        if (userInitial) {
-            userInitial.textContent = username.charAt(0).toUpperCase();
-        }
-
-        const userMenuBtn = document.getElementById('user-menu-btn');
-        const userMenuPopup = document.getElementById('user-menu-popup');
-
-        if (userMenuBtn && userMenuPopup) {
-            userMenuBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                userMenuPopup.style.display = userMenuPopup.style.display === 'none' ? 'block' : 'none';
-            });
-
-            document.addEventListener('click', (e) => {
-                if (!userMenuPopup.contains(e.target) && e.target !== userMenuBtn) {
-                    userMenuPopup.style.display = 'none';
-                }
-            });
-        }
-    }
 
     // ===== PERFIL Y LOGOUT =====
-    function showProfile() {
+    window.showProfile = function () {
         const token = localStorage.getItem('authToken');
         if (!token) {
             window.location.href = '/login.html';
@@ -1115,6 +1126,22 @@ function initializeEventListeners() {
                     <div style="margin-bottom: 24px;">
                         <label style="display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px;">Email</label>
                         <input type="email" id="profile-email" value="${email}" disabled style="width: 100%; padding: 12px; background: var(--bg-elevated); border: 1px solid var(--border-subtle); border-radius: 4px; color: var(--text-base); font-size: 14px; cursor: not-allowed;">
+                    </div>
+                    
+                    <div style="margin-bottom: 24px;">
+                        <label style="display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px;">Imagen de perfil</label>
+                        <div style="display: flex; align-items: center; gap: 16px;">
+                            <div id="profile-image-preview" style="width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                                <span style="font-size: 32px; font-weight: 700; color: #ffffff;">${username.charAt(0).toUpperCase()}</span>
+                            </div>
+                            <div style="flex: 1;">
+                                <input type="file" id="profile-image-input" accept="image/*" style="display: none;">
+                                <button onclick="document.getElementById('profile-image-input').click(); return false;" style="padding: 8px 16px; background: var(--bg-elevated); border: 1px solid var(--border-subtle); border-radius: 4px; color: var(--text-base); font-size: 14px; cursor: pointer; margin-bottom: 8px;">
+                                    Seleccionar imagen
+                                </button>
+                                <p style="font-size: 12px; color: var(--text-subdued); margin: 0;">JPG, PNG o GIF (máx. 2MB)</p>
+                            </div>
+                        </div>
                     </div>
                     
                     <hr style="border: none; border-top: 1px solid var(--border-subtle); margin: 32px 0;">
@@ -1150,6 +1177,44 @@ function initializeEventListeners() {
 
             document.getElementById('user-menu-popup').style.display = 'none';
 
+            // Agregar event listener para el input de imagen
+            const profileImageInput = document.getElementById('profile-image-input');
+            const profileImagePreview = document.getElementById('profile-image-preview');
+
+            if (profileImageInput && profileImagePreview) {
+                profileImageInput.addEventListener('change', function (e) {
+                    const file = e.target.files[0];
+                    if (file) {
+                        // Validar tamaño (2MB máximo)
+                        if (file.size > 2 * 1024 * 1024) {
+                            alert('La imagen no debe superar los 2MB');
+                            return;
+                        }
+
+                        // Validar tipo
+                        if (!file.type.startsWith('image/')) {
+                            alert('Por favor selecciona una imagen válida');
+                            return;
+                        }
+
+                        // Crear preview
+                        const reader = new FileReader();
+                        reader.onload = function (e) {
+                            profileImagePreview.innerHTML = `<img src="${e.target.result}" style="width: 100%; height: 100%; object-fit: cover;">`;
+                            // Guardar en localStorage temporalmente
+                            localStorage.setItem('tempProfileImage', e.target.result);
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                });
+
+                // Cargar imagen guardada si existe
+                const savedImage = localStorage.getItem('profileImage');
+                if (savedImage) {
+                    profileImagePreview.innerHTML = `<img src="${savedImage}" style="width: 100%; height: 100%; object-fit: cover;">`;
+                }
+            }
+
             saveToHistory();
 
         } catch (error) {
@@ -1158,10 +1223,36 @@ function initializeEventListeners() {
         }
     }
 
-    async function updateProfile() {
+    window.logout = function () {
+        // Cerrar el popup del menú de usuario
+        const userMenuPopup = document.getElementById('user-menu-popup');
+        if (userMenuPopup) {
+            userMenuPopup.style.display = 'none';
+        }
+
+        // Limpiar datos de sesión
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('currentUser');
+
+        // Redirigir a la página de login
+        window.location.href = '/login.html';
+    }
+
+    window.updateProfile = async function () {
         const currentPassword = document.getElementById('profile-current-password').value;
         const newPassword = document.getElementById('profile-new-password').value;
         const confirmPassword = document.getElementById('profile-confirm-password').value;
+        const tempImage = localStorage.getItem('tempProfileImage');
+
+        // Si hay una imagen temporal, guardarla
+        if (tempImage) {
+            localStorage.setItem('profileImage', tempImage);
+            localStorage.removeItem('tempProfileImage');
+            alert('✅ Imagen de perfil actualizada correctamente');
+            // Actualizar el avatar en el header
+            generateUserAvatar();
+            return;
+        }
 
         // Validar que se hayan llenado los campos de contraseña
         if (!currentPassword && !newPassword && !confirmPassword) {
