@@ -210,7 +210,7 @@ async function loadDJs() {
 
         container.innerHTML = djs.map(dj => `
             <div class="dj-card" onclick="window.showArtistPage(${dj.id})" style="cursor: pointer; text-align: center;">
-                <div class="dj-image" style="width: 180px; height: 180px; border-radius: 50%; overflow: hidden; margin: 0 auto 16px; background: linear-gradient(135deg, ${getRandomGradient()});">
+                <div class="dj-image" style="width: 140px; height: 140px; border-radius: 50%; overflow: hidden; margin: 0 auto 12px; background: linear-gradient(135deg, ${getRandomGradient()});">
                     ${dj.image_url ? `<img src="${dj.image_url}" alt="${dj.name}" style="width: 100%; height: 100%; object-fit: cover;">` : ''}
                 </div>
                 <div class="dj-name" style="font-size: 16px; font-weight: 700; color: var(--text-base); margin-bottom: 4px;">${dj.name}</div>

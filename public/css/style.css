@@ -1,4 +1,4 @@
-:root {
+﻿:root {
     --bg-base: #000000;
     --bg-elevated: #121212;
     --bg-highlight: #1a1a1a;
@@ -685,7 +685,7 @@ body {
 .djs-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 32px;
+    gap: 16px;
     padding: 0 20px;
 }
 
