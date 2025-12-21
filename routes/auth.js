@@ -3,6 +3,9 @@ const router = express.Router();
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const db = require('../config/database');
+const upload = require('../config/multer');
+const fs = require('fs');
+const path = require('path');
 
 // Login
 router.post('/login', async (req, res) => {
@@ -57,7 +60,7 @@ router.post('/login', async (req, res) => {
 // Register
 router.post('/register', async (req, res) => {
     try {
-        const { username, email, password } = req.body;
+        const { username, first_name, last_name, phone, email, password } = req.body;
 
         // Verificar si el usuario ya existe
         const [existing] = await db.query(
@@ -74,8 +77,8 @@ router.post('/register', async (req, res) => {
 
         // Crear usuario
         const [result] = await db.query(
-            'INSERT INTO users (username, email, password_hash, role) VALUES (?, ?, ?, ?)',
-            [username, email, passwordHash, 'user']
+            'INSERT INTO users (username, first_name, last_name, phone, email, password_hash, role) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            [username, first_name, last_name, phone, email, passwordHash, 'user']
         );
 
         const userId = result.insertId;
@@ -138,6 +141,69 @@ router.get('/verify', async (req, res) => {
         res.json({ user: users[0] });
     } catch (error) {
         res.status(401).json({ error: 'Token inválido' });
+    }
+});
+
+// Middleware de autenticación
+const authenticateToken = (req, res, next) => {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+
+    if (!token) {
+        return res.status(401).json({ error: 'No autorizado' });
+    }
+
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        req.user = decoded;
+        next();
+    } catch (error) {
+        return res.status(401).json({ error: 'Token inválido' });
+    }
+};
+
+// Subir imagen de perfil
+router.post('/upload-profile-image', authenticateToken, upload.single('image'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: 'No se proporcionó ninguna imagen' });
+        }
+
+        const userId = req.user.userId;
+        const imageUrl = `/uploads/profiles/${req.file.filename}`;
+
+        // Obtener imagen anterior si existe
+        const [users] = await db.query(
+            'SELECT profile_image FROM users WHERE id = ?',
+            [userId]
+        );
+
+        const oldImage = users[0]?.profile_image;
+
+        // Actualizar base de datos
+        await db.query(
+            'UPDATE users SET profile_image = ? WHERE id = ?',
+            [imageUrl, userId]
+        );
+
+        // Eliminar imagen anterior si existe
+        if (oldImage) {
+            const oldImagePath = path.join(__dirname, '..', oldImage);
+            if (fs.existsSync(oldImagePath)) {
+                fs.unlinkSync(oldImagePath);
+            }
+        }
+
+        res.json({
+            success: true,
+            imageUrl: imageUrl,
+            message: 'Imagen de perfil actualizada correctamente'
+        });
+    } catch (error) {
+        // Si hay error, eliminar el archivo subido
+        if (req.file) {
+            fs.unlinkSync(req.file.path);
+        }
+        res.status(500).json({ error: error.message });
     }
 });
 

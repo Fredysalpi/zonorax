@@ -552,10 +552,14 @@ function generateUserAvatar() {
         }
     }
 
+
     const userInitial = document.getElementById('user-initial');
     const userMenuBtn = document.getElementById('user-menu-btn');
     const userMenuPopup = document.getElementById('user-menu-popup');
-    const profileImage = localStorage.getItem('profileImage');
+
+    // Obtener imagen de perfil desde currentUser
+    const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+    const profileImage = currentUser.profile_image;
 
     if (userMenuBtn) {
         // Si hay imagen de perfil guardada, mostrarla
@@ -1201,17 +1205,17 @@ function initializeEventListeners() {
                         const reader = new FileReader();
                         reader.onload = function (e) {
                             profileImagePreview.innerHTML = `<img src="${e.target.result}" style="width: 100%; height: 100%; object-fit: cover;">`;
-                            // Guardar en localStorage temporalmente
-                            localStorage.setItem('tempProfileImage', e.target.result);
+                            // Guardar el archivo temporalmente para subirlo después
+                            window.tempProfileImageFile = file;
                         };
                         reader.readAsDataURL(file);
                     }
                 });
 
-                // Cargar imagen guardada si existe
-                const savedImage = localStorage.getItem('profileImage');
-                if (savedImage) {
-                    profileImagePreview.innerHTML = `<img src="${savedImage}" style="width: 100%; height: 100%; object-fit: cover;">`;
+                // Cargar imagen guardada desde el servidor si existe
+                const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+                if (currentUser.profile_image) {
+                    profileImagePreview.innerHTML = `<img src="${currentUser.profile_image}" style="width: 100%; height: 100%; object-fit: cover;">`;
                 }
             }
 
@@ -1242,16 +1246,44 @@ function initializeEventListeners() {
         const currentPassword = document.getElementById('profile-current-password').value;
         const newPassword = document.getElementById('profile-new-password').value;
         const confirmPassword = document.getElementById('profile-confirm-password').value;
-        const tempImage = localStorage.getItem('tempProfileImage');
 
-        // Si hay una imagen temporal, guardarla
-        if (tempImage) {
-            localStorage.setItem('profileImage', tempImage);
-            localStorage.removeItem('tempProfileImage');
-            alert('✅ Imagen de perfil actualizada correctamente');
-            // Actualizar el avatar en el header
-            generateUserAvatar();
-            return;
+        // Si hay una imagen temporal, subirla al servidor
+        if (window.tempProfileImageFile) {
+            try {
+                const formData = new FormData();
+                formData.append('image', window.tempProfileImageFile);
+
+                const token = localStorage.getItem('authToken');
+                const response = await fetch(`${API_BASE_URL}/auth/upload-profile-image`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Error al subir la imagen');
+                }
+
+                // Actualizar currentUser en localStorage
+                const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+                currentUser.profile_image = data.imageUrl;
+                localStorage.setItem('currentUser', JSON.stringify(currentUser));
+
+                // Limpiar archivo temporal
+                delete window.tempProfileImageFile;
+
+                alert('✅ Imagen de perfil actualizada correctamente');
+                // Actualizar el avatar en el header
+                generateUserAvatar();
+                return;
+            } catch (error) {
+                alert('❌ Error al subir la imagen: ' + error.message);
+                return;
+            }
         }
 
         // Validar que se hayan llenado los campos de contraseña

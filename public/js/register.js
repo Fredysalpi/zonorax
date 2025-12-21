@@ -19,7 +19,6 @@ registerForm.addEventListener('submit', async (e) => {
     const email = document.getElementById('email').value.trim();
     const password = document.getElementById('password').value;
     const passwordConfirm = document.getElementById('password-confirm').value;
-    const isAdmin = document.getElementById('is-admin').checked;
 
     // Validaciones
     if (password !== passwordConfirm) {
@@ -58,8 +57,7 @@ registerForm.addEventListener('submit', async (e) => {
                 last_name: lastName,
                 phone,
                 email,
-                password,
-                role: isAdmin ? 'admin' : 'user'
+                password
             })
         });
 
@@ -75,8 +73,7 @@ registerForm.addEventListener('submit', async (e) => {
             Usuario: ${username}<br>
             Nombre: ${firstName} ${lastName}<br>
             Email: ${email}<br>
-            Teléfono: ${phone}<br>
-            Rol: ${isAdmin ? 'Administrador' : 'Usuario'}<br><br>
+            Teléfono: ${phone}<br><br>
             Redirigiendo al login...
         `;
         successMessage.style.display = 'block';
