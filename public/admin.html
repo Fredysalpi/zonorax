@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Administración - Zonorax</title>
+    <meta name="description" content="Panel de administración para gestionar DJs, canciones y contenido">
+    <link rel="stylesheet" href="/css/admin.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+</head>
+
+<body>
+    <div class="admin-container">
+        <!-- Sidebar -->
+        <aside class="admin-sidebar">
+            <div class="admin-logo">
+                <svg viewBox="0 0 24 24" width="32" height="32">
+                    <circle cx="12" cy="12" r="10" fill="currentColor" />
+                    <circle cx="12" cy="12" r="6" fill="#000" />
+                    <circle cx="12" cy="12" r="2" fill="currentColor" />
+                </svg>
+                <span>Zonorax Admin</span>
+            </div>
+
+            <nav class="admin-nav">
+                <a href="#dashboard" class="nav-link active" data-section="dashboard">
+                    <svg viewBox="0 0 24 24" width="20" height="20">
+                        <path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z" fill="currentColor" />
+                    </svg>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#artists" class="nav-link" data-section="artists">
+                    <svg viewBox="0 0 24 24" width="20" height="20">
+                        <path
+                            d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
+                            fill="currentColor" />
+                    </svg>
+                    <span>DJs / Artistas</span>
+                </a>
+                <a href="#songs" class="nav-link" data-section="songs">
+                    <svg viewBox="0 0 24 24" width="20" height="20">
+                        <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"
+                            fill="currentColor" />
+                    </svg>
+                    <span>Canciones</span>
+                </a>
+                <a href="#uploads" class="nav-link" data-section="uploads">
+                    <svg viewBox="0 0 24 24" width="20" height="20">
+                        <path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z" fill="currentColor" />
+                    </svg>
+                    <span>Archivos Subidos</span>
+                </a>
+                <a href="/" class="nav-link">
+                    <svg viewBox="0 0 24 24" width="20" height="20">
+                        <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" fill="currentColor" />
+                    </svg>
+                    <span>Volver al Reproductor</span>
+                </a>
+            </nav>
+
+            <div class="admin-user">
+                <img src="/images/user-avatar.jpg" alt="Admin" id="admin-avatar">
+                <div class="user-info">
+                    <div class="user-name" id="admin-name">Administrador</div>
+                    <div class="user-role">Admin</div>
+                </div>
+                <button class="logout-btn" id="logout-btn" title="Cerrar sesión">
+                    <svg viewBox="0 0 24 24" width="20" height="20">
+                        <path
+                            d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"
+                            fill="currentColor" />
+                    </svg>
+                </button>
+            </div>
+        </aside>
+
+        <!-- Contenido principal -->
+        <main class="admin-main">
+            <!-- Dashboard -->
+            <section id="dashboard-section" class="admin-section active">
+                <div class="section-header">
+                    <h1>Dashboard</h1>
+                    <p>Resumen general del sistema</p>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                            <svg viewBox="0 0 24 24" width="24" height="24">
+                                <path
+                                    d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"
+                                    fill="currentColor" />
+                            </svg>
+                        </div>
+                        <div class="stat-info">
+                            <div class="stat-label">Total Canciones</div>
+                            <div class="stat-value" id="stat-songs">0</div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                            <svg viewBox="0 0 24 24" width="24" height="24">
+                                <path
+                                    d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
+                                    fill="currentColor" />
+                            </svg>
+                        </div>
+                        <div class="stat-info">
+                            <div class="stat-label">DJs / Artistas</div>
+                            <div class="stat-value" id="stat-artists">0</div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                            <svg viewBox="0 0 24 24" width="24" height="24">
+                                <path
+                                    d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"
+                                    fill="currentColor" />
+                            </svg>
+                        </div>
+                        <div class="stat-info">
+                            <div class="stat-label">Usuarios</div>
+                            <div class="stat-value" id="stat-users">0</div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
+                            <svg viewBox="0 0 24 24" width="24" height="24">
+                                <path
+                                    d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM9 17H7v-7h2v7zm4 0h-2V7h2v10zm4 0h-2v-4h2v4z"
+                                    fill="currentColor" />
+                            </svg>
+                        </div>
+                        <div class="stat-info">
+                            <div class="stat-label">Reproducciones</div>
+                            <div class="stat-value" id="stat-plays">0</div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);">
+                            <svg viewBox="0 0 24 24" width="24" height="24">
+                                <path
+                                    d="M20 6h-2.18c.11-.31.18-.65.18-1 0-1.66-1.34-3-3-3-1.05 0-1.96.54-2.5 1.35l-.5.67-.5-.68C10.96 2.54 10.05 2 9 2 7.34 2 6 3.34 6 5c0 .35.07.69.18 1H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-5-2c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zM9 4c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm11 15H4v-2h16v2zm0-5H4V8h5.08L7 10.83 8.62 12 11 8.76l1-1.36 1 1.36L15.38 12 17 10.83 14.92 8H20v6z"
+                                    fill="currentColor" />
+                            </svg>
+                        </div>
+                        <div class="stat-info">
+                            <div class="stat-label">Playlists</div>
+                            <div class="stat-value" id="stat-playlists">0</div>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);">
+                            <svg viewBox="0 0 24 24" width="24" height="24">
+                                <path
+                                    d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"
+                                    fill="currentColor" />
+                            </svg>
+                        </div>
+                        <div class="stat-info">
+                            <div class="stat-label">Almacenamiento</div>
+                            <div class="stat-value" id="stat-storage">0 MB</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Gestión de Artistas -->
+            <section id="artists-section" class="admin-section">
+                <div class="section-header">
+                    <div>
+                        <h1>DJs / Artistas</h1>
+                        <p>Gestiona los artistas y DJs de la plataforma</p>
+                    </div>
+                    <button class="btn-primary" id="add-artist-btn">
+                        <svg viewBox="0 0 24 24" width="20" height="20">
+                            <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" fill="currentColor" />
+                        </svg>
+                        Nuevo DJ/Artista
+                    </button>
+                </div>
+
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Imagen</th>
+                                <th>Nombre</th>
+                                <th>Género</th>
+                                <th>Estado</th>
+                                <th>Canciones</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="artists-table-body">
+                            <!-- Se llenará dinámicamente -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Gestión de Canciones -->
+            <section id="songs-section" class="admin-section">
+                <div class="section-header">
+                    <div>
+                        <h1>Canciones</h1>
+                        <p>Gestiona las canciones y archivos de audio</p>
+                    </div>
+                    <button class="btn-primary" id="add-song-btn">
+                        <svg viewBox="0 0 24 24" width="20" height="20">
+                            <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z" fill="currentColor" />
+                        </svg>
+                        Nueva Canción
+                    </button>
+                </div>
+
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Cover</th>
+                                <th>Título</th>
+                                <th>Artista</th>
+                                <th>Formato</th>
+                                <th>BPM</th>
+                                <th>Key</th>
+                                <th>Reproducciones</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="songs-table-body">
+                            <!-- Se llenará dinámicamente -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Archivos Subidos -->
+            <section id="uploads-section" class="admin-section">
+                <div class="section-header">
+                    <h1>Archivos Subidos</h1>
+                    <p>Historial de archivos subidos a Cloudflare R2</p>
+                </div>
+
+                <div class="table-container">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Archivo</th>
+                                <th>Tipo</th>
+                                <th>Formato</th>
+                                <th>Tamaño</th>
+                                <th>Usuario</th>
+                                <th>Fecha</th>
+                            </tr>
+                        </thead>
+                        <tbody id="uploads-table-body">
+                            <!-- Se llenará dinámicamente -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Modal para Artista -->
+    <div id="artist-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="artist-modal-title">Nuevo DJ/Artista</h2>
+                <button class="close-modal">&times;</button>
+            </div>
+            <form id="artist-form" enctype="multipart/form-data">
+                <input type="hidden" id="artist-id" name="id">
+
+                <div class="form-group">
+                    <label for="artist-name">Nombre *</label>
+                    <input type="text" id="artist-name" name="name" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="artist-genre">Género Musical</label>
+                    <input type="text" id="artist-genre" name="genre" placeholder="Ej: Electrónica, Reggaeton, Rock">
+                </div>
+
+                <div class="form-group">
+                    <label for="artist-bio">Biografía</label>
+                    <textarea id="artist-bio" name="bio" rows="4"></textarea>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="artist-image">Imagen de Perfil</label>
+                        <input type="file" id="artist-image" name="image" accept="image/*">
+                        <small>JPG, PNG o WebP - Máx 5MB</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="artist-cover">Cover/Banner Principal</label>
+                        <input type="file" id="artist-cover" name="cover" accept="image/*">
+                        <small>JPG, PNG o WebP - Máx 5MB</small>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="artist-cover2">Cover 2 (Para Biografía)</label>
+                    <input type="file" id="artist-cover2" name="cover2" accept="image/*">
+                    <small>JPG, PNG o WebP - Máx 5MB - Se mostrará debajo de la biografía</small>
+                </div>
+
+                <div class="form-group checkbox-group">
+                    <label>
+                        <input type="checkbox" id="artist-verified" name="is_verified">
+                        <span>✓ Artista Verificado (aparecerá badge de verificación)</span>
+                    </label>
+                </div>
+
+                <div class="form-group checkbox-group">
+                    <label>
+                        <input type="checkbox" id="artist-active" name="is_active" checked>
+                        <span>✓ Artista Activo (visible en la plataforma)</span>
+                    </label>
+                </div>
+
+                <div class="form-group">
+                    <label>Redes Sociales</label>
+                    <div style="display: grid; gap: 12px; margin-top: 8px;">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <img src="/images/facebook.png" alt="Facebook" style="width: 24px; height: 24px;">
+                            <input type="url" id="artist-facebook" name="facebook"
+                                placeholder="https://facebook.com/username" style="flex: 1;">
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <img src="/images/instagram.png" alt="Instagram" style="width: 24px; height: 24px;">
+                            <input type="url" id="artist-instagram" name="instagram"
+                                placeholder="https://instagram.com/username" style="flex: 1;">
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <img src="/images/whatsapp.png" alt="WhatsApp" style="width: 24px; height: 24px;">
+                            <input type="url" id="artist-whatsapp" name="whatsapp"
+                                placeholder="https://wa.me/1234567890" style="flex: 1;">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary close-modal">Cancelar</button>
+                    <button type="submit" class="btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal para Canción -->
+    <div id="song-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="song-modal-title">Nueva Canción</h2>
+                <button class="close-modal">&times;</button>
+            </div>
+            <form id="song-form" enctype="multipart/form-data">
+                <input type="hidden" id="song-id" name="id">
+
+                <div class="form-group">
+                    <label for="song-title">Título *</label>
+                    <input type="text" id="song-title" name="title" required>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="song-artist">Artista *</label>
+                        <select id="song-artist" name="artist_id" required>
+                            <option value="">Seleccionar artista...</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="song-duration">Duración (segundos) *</label>
+                        <input type="number" id="song-duration" name="duration" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="song-genre">Género</label>
+                        <input type="text" id="song-genre" name="genre">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="song-bpm">BPM</label>
+                        <input type="number" id="song-bpm" name="bpm" placeholder="120">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="song-key">Key</label>
+                        <input type="text" id="song-key" name="key_signature" placeholder="Am">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="song-audio">Archivo de Audio *</label>
+                    <input type="file" id="song-audio" name="audio" accept=".mp3,.wav,.aac,.ogg">
+                    <small>MP3, WAV, AAC o OGG - Máx 100MB</small>
+                    <div id="upload-progress" class="upload-progress" style="display: none;">
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progress-fill"></div>
+                        </div>
+                        <span id="progress-text">0%</span>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="song-cover">Cover de la Canción</label>
+                    <input type="file" id="song-cover" name="cover" accept="image/*">
+                    <small>JPG, PNG o WebP - Máx 5MB</small>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary close-modal">Cancelar</button>
+                    <button type="submit" class="btn-primary">Subir Canción</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="/js/admin.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Zonorax</title>
+    <link rel="stylesheet" href="/css/login.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="login-container">
+        <div class="login-box">
+            <div class="logo">
+                <svg viewBox="0 0 24 24" width="48" height="48">
+                    <circle cx="12" cy="12" r="10" fill="currentColor" />
+                    <circle cx="12" cy="12" r="6" fill="#000" />
+                    <circle cx="12" cy="12" r="2" fill="currentColor" />
+                </svg>
+                <h1>Zonorax</h1>
+            </div>
+
+            <h2>Iniciar Sesión</h2>
+            <p class="subtitle">Accede al panel de administración</p>
+
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" name="email" required autocomplete="email">
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Contraseña</label>
+                    <input type="password" id="password" name="password" required autocomplete="current-password">
+                </div>
+
+                <button type="submit" class="btn-login">Iniciar Sesión</button>
+            </form>
+
+            <div class="divider">
+                <span>o</span>
+            </div>
+
+            <a href="/" class="btn-secondary">Volver al Reproductor</a>
+
+            <div class="demo-info">
+                <p><strong>¿No tienes cuenta?</strong></p>
+                <p><a href="/register.html" style="color: #1ed760; text-decoration: none;">Crear una cuenta nueva</a>
+                </p>
+                <p style="margin-top: 16px;"><strong>Credenciales de prueba:</strong></p>
+                <p>Email: <code>admin@zonorax.com</code></p>
+                <p>Contraseña: <code>admin123</code></p>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/login.js"></script>
+</body>
+
+</html>

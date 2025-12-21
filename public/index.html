@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zonorax - Reproductor de Música para DJs</title>
+    <meta name="description" content="Reproductor de música profesional para DJs con sets y mezclas">
+    <link rel="stylesheet" href="/css/style.css?v=2.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Sidebar izquierda -->
+        <aside class="sidebar-left">
+            <div class="logo">
+                <svg viewBox="0 0 24 24" width="32" height="32">
+                    <circle cx="12" cy="12" r="10" fill="currentColor" />
+                    <circle cx="12" cy="12" r="6" fill="#000" />
+                    <circle cx="12" cy="12" r="2" fill="currentColor" />
+                </svg>
+                <span>Zonorax</span>
+            </div>
+
+            <nav class="main-nav">
+                <a href="#" class="nav-item active" id="home-btn"
+                    onclick="event.preventDefault(); goHome(); return false;">
+                    <svg viewBox="0 0 24 24" width="24" height="24">
+                        <path
+                            d="M12.5 3.247a1 1 0 0 0-1 0L4 7.577V20h4.5v-6a1 1 0 0 1 1-1h5a1 1 0 0 1 1 1v6H20V7.577l-7.5-4.33zm-2-1.732a3 3 0 0 1 3 0l7.5 4.33a2 2 0 0 1 1 1.732V21a1 1 0 0 1-1 1h-6.5a1 1 0 0 1-1-1v-6h-3v6a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V7.577a2 2 0 0 1 1-1.732l7.5-4.33z"
+                            fill="currentColor" />
+                    </svg>
+                    <span>Inicio</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <svg viewBox="0 0 24 24" width="24" height="24">
+                        <path
+                            d="M10.533 1.279c-5.18 0-9.407 4.14-9.407 9.279s4.226 9.279 9.407 9.279c2.234 0 4.29-.77 5.907-2.058l4.353 4.353a1 1 0 1 0 1.414-1.414l-4.344-4.344a9.157 9.157 0 0 0 2.077-5.816c0-5.14-4.226-9.28-9.407-9.28zm-7.407 9.279c0-4.006 3.302-7.28 7.407-7.28s7.407 3.274 7.407 7.28-3.302 7.279-7.407 7.279-7.407-3.273-7.407-7.28z"
+                            fill="currentColor" />
+                    </svg>
+                    <span>Buscar</span>
+                </a>
+            </nav>
+
+            <div class="library-section">
+                <div class="library-header">
+                    <div class="library-title">
+                        <svg viewBox="0 0 24 24" width="24" height="24">
+                            <path
+                                d="M3 22a1 1 0 0 1-1-1V3a1 1 0 0 1 2 0v18a1 1 0 0 1-1 1zM15.5 2.134A1 1 0 0 0 14 3v18a1 1 0 0 0 1.5.866l8-4.5a1 1 0 0 0 0-1.732l-8-4.5zM16 19.268V4.732L21.197 12 16 19.268zM7 2a1 1 0 0 0-1 1v18a1 1 0 1 0 2 0V3a1 1 0 0 0-1-1z"
+                                fill="currentColor" />
+                        </svg>
+                        <span>Tu biblioteca</span>
+                    </div>
+                    <div class="library-actions">
+                        <button class="icon-btn" title="Crear playlist">
+                            <svg viewBox="0 0 16 16" width="16" height="16">
+                                <path
+                                    d="M15.25 8a.75.75 0 0 1-.75.75H8.75v5.75a.75.75 0 0 1-1.5 0V8.75H1.5a.75.75 0 0 1 0-1.5h5.75V1.5a.75.75 0 0 1 1.5 0v5.75h5.75a.75.75 0 0 1 .75.75z"
+                                    fill="currentColor" />
+                            </svg>
+                        </button>
+                        <button class="icon-btn" title="Expandir">
+                            <svg viewBox="0 0 16 16" width="16" height="16">
+                                <path
+                                    d="M11.03.47a.75.75 0 0 1 0 1.06L4.56 8l6.47 6.47a.75.75 0 1 1-1.06 1.06L2.44 8 9.97.47a.75.75 0 0 1 1.06 0z"
+                                    fill="currentColor" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+
+
+                <div class="playlists-list" id="playlists-container">
+                    <!-- Playlists se cargarán dinámicamente -->
+                </div>
+            </div>
+        </aside>
+
+        <!-- Contenido principal -->
+        <main class="main-content">
+            <header class="top-bar">
+                <div class="nav-buttons">
+                    <button class="nav-btn">
+                        <svg viewBox="0 0 16 16" width="16" height="16">
+                            <path
+                                d="M11.03.47a.75.75 0 0 1 0 1.06L4.56 8l6.47 6.47a.75.75 0 1 1-1.06 1.06L2.44 8 9.97.47a.75.75 0 0 1 1.06 0z"
+                                fill="currentColor" />
+                        </svg>
+                    </button>
+                    <button class="nav-btn">
+                        <svg viewBox="0 0 16 16" width="16" height="16">
+                            <path
+                                d="M4.97.47a.75.75 0 0 0 0 1.06L11.44 8l-6.47 6.47a.75.75 0 1 0 1.06 1.06L13.56 8 6.03.47a.75.75 0 0 0-1.06 0z"
+                                fill="currentColor" />
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="search-bar">
+                    <svg viewBox="0 0 16 16" width="16" height="16">
+                        <path
+                            d="M7 1.75a5.25 5.25 0 1 0 0 10.5 5.25 5.25 0 0 0 0-10.5zM.25 7a6.75 6.75 0 1 1 12.096 4.12l3.184 3.185a.75.75 0 1 1-1.06 1.06L11.304 12.18A6.75 6.75 0 0 1 .25 7z"
+                            fill="currentColor" />
+                    </svg>
+                    <input type="text" placeholder="¿Qué quieres reproducir?" id="main-search">
+                    
+                    <!-- Dropdown de búsquedas recientes -->
+                    <div id="search-dropdown" class="search-dropdown" style="display: none;">
+                        <div class="search-dropdown-header">
+                            <h3>Búsquedas recientes</h3>
+                            <button id="clear-recent-searches" class="clear-searches-btn">Eliminar búsquedas recientes</button>
+                        </div>
+                        <div id="recent-searches-list" class="recent-searches-list">
+                            <!-- Se llenará dinámicamente -->
+                        </div>
+                    </div>
+                </div>
+
+                <div class="user-actions">
+                    <!-- Botón de instalar removido -->
+                    <button class="icon-btn">
+                        <svg viewBox="0 0 16 16" width="16" height="16">
+                            <path
+                                d="M8 1.5a4 4 0 0 0-4 4v3.27a.75.75 0 0 1-.1.373L2.255 12h11.49L12.1 9.142a.75.75 0 0 1-.1-.374V5.5a4 4 0 0 0-4-4zm-5.5 4a5.5 5.5 0 0 1 11 0v3.067l1.703 2.555A.75.75 0 0 1 14.571 13H1.43a.75.75 0 0 1-.632-1.148L2.5 8.767V5.5zm3.5 9a2 2 0 1 0 4 0h-4z"
+                                fill="currentColor" />
+                        </svg>
+                    </button>
+                    <button class="icon-btn">
+                        <svg viewBox="0 0 16 16" width="16" height="16">
+                            <path d="M8 1.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13zM0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8z"
+                                fill="currentColor" />
+                            <path d="M8 3.25a.75.75 0 0 1 .75.75v3.25H12a.75.75 0 0 1 0 1.5H7.25V4A.75.75 0 0 1 8 3.25z"
+                                fill="currentColor" />
+                        </svg>
+                    </button>
+                    <button class="user-btn" id="user-menu-btn"
+                        style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center;">
+                        <span id="user-initial" style="font-size: 16px; font-weight: 700; color: #ffffff;">U</span>
+                    </button>
+                    <!-- Popup del usuario -->
+                    <div id="user-menu-popup"
+                        style="display: none; position: absolute; top: 60px; right: 24px; background: var(--bg-highlight); border-radius: 8px; padding: 8px; min-width: 200px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); z-index: 1000;">
+                        <button onclick="event.preventDefault(); event.stopPropagation(); showProfile();"
+                            style="width: 100%; text-align: left; padding: 12px 16px; background: transparent; border: none; color: var(--text-base); cursor: pointer; border-radius: 4px; font-size: 14px; font-weight: 500;"
+                            onmouseover="this.style.backgroundColor='var(--bg-tint)'"
+                            onmouseout="this.style.backgroundColor='transparent'">
+                            <svg viewBox="0 0 16 16" width="16" height="16"
+                                style="vertical-align: middle; margin-right: 12px;">
+                                <path
+                                    d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm0 1.5a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9zm-5.5 6a5.5 5.5 0 0 1 11 0 .75.75 0 0 1-1.5 0 4 4 0 1 0-8 0 .75.75 0 0 1-1.5 0z"
+                                    fill="currentColor" />
+                            </svg>
+                            Perfil
+                        </button>
+                        <hr style="border: none; border-top: 1px solid var(--border-subtle); margin: 4px 0;">
+                        <button onclick="event.preventDefault(); event.stopPropagation(); logout();"
+                            style="width: 100%; text-align: left; padding: 12px 16px; background: transparent; border: none; color: var(--text-base); cursor: pointer; border-radius: 4px; font-size: 14px; font-weight: 500;"
+                            onmouseover="this.style.backgroundColor='var(--bg-tint)'"
+                            onmouseout="this.style.backgroundColor='transparent'">
+                            <svg viewBox="0 0 16 16" width="16" height="16"
+                                style="vertical-align: middle; margin-right: 12px;">
+                                <path
+                                    d="M2 2.75C2 1.784 2.784 1 3.75 1h2.5a.75.75 0 0 1 0 1.5h-2.5a.25.25 0 0 0-.25.25v10.5c0 .138.112.25.25.25h2.5a.75.75 0 0 1 0 1.5h-2.5A1.75 1.75 0 0 1 2 13.25V2.75zm10.44 4.5-1.97-1.97a.75.75 0 0 1 1.06-1.06l3.25 3.25a.75.75 0 0 1 0 1.06l-3.25 3.25a.75.75 0 1 1-1.06-1.06l1.97-1.97H6.75a.75.75 0 0 1 0-1.5h5.69z"
+                                    fill="currentColor" />
+                            </svg>
+                            Cerrar sesión
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <div class="content-wrapper">
+                <!-- Sección de DJs Destacados -->
+                <section class="djs-section">
+                    <h2 style="font-size: 24px; font-weight: 700; margin-bottom: 24px; color: var(--text-base);">DJs Destacados</h2>
+                    <div class="djs-grid" id="djs-grid">
+                        <!-- DJs se cargarán aquí -->
+                    </div>
+                </section>
+
+                <section class="featured-section">
+                    <div class="featured-grid" id="featured-playlists">
+                        <!-- Playlists destacadas se cargarán aquí -->
+                    </div>
+                </section>
+
+                <section class="releases-section">
+                    <div class="section-header">
+                        <h2>Viernes de lanzamientos</h2>
+                        <a href="#" class="show-all">Mostrar todo</a>
+                    </div>
+                    <div class="releases-grid" id="releases-grid">
+                        <!-- Lanzamientos se cargarán aquí -->
+                    </div>
+                </section>
+            </div>
+        </main>
+
+        <!-- Sidebar derecha (Canción Actual) -->
+        <aside class="sidebar-right">
+            <div class="artist-header">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <h3 id="song-title-sidebar">Canción</h3>
+                </div>
+                <button class="close-btn">
+                    <svg viewBox="0 0 16 16" width="16" height="16">
+                        <path
+                            d="M2.47 2.47a.75.75 0 0 1 1.06 0L8 6.94l4.47-4.47a.75.75 0 1 1 1.06 1.06L9.06 8l4.47 4.47a.75.75 0 1 1-1.06 1.06L8 9.06l-4.47 4.47a.75.75 0 0 1-1.06-1.06L6.94 8 2.47 3.53a.75.75 0 0 1 0-1.06z"
+                            fill="currentColor" />
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Portada de la canción -->
+            <div style="padding: 20px;">
+                <img id="song-cover-sidebar" src="/images/placeholder-cover.jpg" alt="Portada"
+                    style="width: 100%; aspect-ratio: 1; border-radius: 8px; object-fit: cover; margin-bottom: 20px;">
+
+                <!-- Información de la canción -->
+                <div style="margin-bottom: 20px;">
+                    <h4 style="font-size: 18px; font-weight: 700; margin-bottom: 8px; color: var(--text-base);"
+                        id="song-title-detail">
+                        Selecciona una canción
+                    </h4>
+                    <p id="song-artist-detail"
+                        style="font-size: 14px; color: var(--text-subdued); margin-bottom: 12px;">
+                        Artista
+                    </p>
+                    <p id="song-album-detail" style="font-size: 14px; color: var(--text-subdued);">
+                        Álbum
+                    </p>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Player inferior -->
+        <div class="player-bar"
+            style="background-color: #181818 !important; border-top: 1px solid #282828 !important; height: 90px !important; display: grid !important; grid-template-columns: 30% 40% 30% !important; align-items: center !important; padding: 12px 16px !important; gap: 16px !important; margin-bottom: 0 !important;">
+            <div class="player-left">
+                <div class="song-info">
+                    <img src="/images/placeholder-cover.jpg" alt="Cover" id="player-cover">
+                    <div class="song-details">
+                        <div class="song-title" id="player-song-title">TODO KE VER</div>
+                        <div class="song-artist" style="display: flex; align-items: center; gap: 4px;">
+                            <span id="player-artist" style="cursor: pointer;" onclick="goToCurrentArtist()">Vídeo musical • Jere Klein, Katteyes, Mateo on ti</span>
+                            <img src="/images/verificado.png" alt="Verificado" id="player-verified-badge"
+                                style="width: 14px; height: 14px; display: none;" title="Artista Verificado">
+                        </div>
+                    </div>
+                </div>
+                
+            </div>
+
+            <div class="player-center">
+                <div class="player-controls">
+                    <button class="control-btn shuffle-btn" title="Activar orden aleatorio">
+                        <svg viewBox="0 0 16 16" width="16" height="16">
+                            <path
+                                d="M13.151.922a.75.75 0 1 0-1.06 1.06L13.109 3H11.16a3.75 3.75 0 0 0-2.873 1.34l-6.173 7.356A2.25 2.25 0 0 1 .39 12.5H0V14h.391a3.75 3.75 0 0 0 2.873-1.34l6.173-7.356a2.25 2.25 0 0 1 1.724-.804h1.947l-1.017 1.018a.75.75 0 0 0 1.06 1.06L15.98 3.75 13.15.922zM.391 3.5H0V2h.391c1.109 0 2.16.49 2.873 1.34L4.89 5.277l-.979 1.167-1.796-2.14A2.25 2.25 0 0 0 .39 3.5z"
+                                fill="currentColor" />
+                            <path
+                                d="m7.5 10.723.98-1.167.957 1.14a2.25 2.25 0 0 0 1.724.804h1.947l-1.017-1.018a.75.75 0 1 1 1.06-1.06l2.829 2.828-2.829 2.828a.75.75 0 1 1-1.06-1.06L13.109 13H11.16a3.75 3.75 0 0 1-2.873-1.34l-.787-.938z"
+                                fill="currentColor" />
+                        </svg>
+                    </button>
+                    <button class="control-btn prev-btn" title="Anterior">
+                        <svg viewBox="0 0 16 16" width="16" height="16">
+                            <path
+                                d="M3.3 1a.7.7 0 0 1 .7.7v5.15l9.95-5.744a.7.7 0 0 1 1.05.606v12.575a.7.7 0 0 1-1.05.607L4 9.149V14.3a.7.7 0 0 1-.7.7H1.7a.7.7 0 0 1-.7-.7V1.7a.7.7 0 0 1 .7-.7h1.6z"
+                                fill="currentColor" />
+                        </svg>
+                    </button>
+                    <button class="control-btn play-btn" id="play-pause-btn" title="Reproducir">
+                        <svg viewBox="0 0 16 16" width="16" height="16">
+                            <path
+                                d="M3 1.713a.7.7 0 0 1 1.05-.607l10.89 6.288a.7.7 0 0 1 0 1.212L4.05 14.894A.7.7 0 0 1 3 14.288V1.713z"
+                                fill="currentColor" />
+                        </svg>
+                    </button>
+                    <button class="control-btn next-btn" title="Siguiente">
+                        <svg viewBox="0 0 16 16" width="16" height="16">
+                            <path
+                                d="M12.7 1a.7.7 0 0 0-.7.7v5.15L2.05 1.107A.7.7 0 0 0 1 1.712v12.575a.7.7 0 0 0 1.05.607L12 9.149V14.3a.7.7 0 0 0 .7.7h1.6a.7.7 0 0 0 .7-.7V1.7a.7.7 0 0 0-.7-.7h-1.6z"
+                                fill="currentColor" />
+                        </svg>
+                    </button>
+                    <button class="control-btn repeat-btn" title="Activar repetición">
+                        <svg viewBox="0 0 16 16" width="16" height="16">
+                            <path
+                                d="M0 4.75A3.75 3.75 0 0 1 3.75 1h8.5A3.75 3.75 0 0 1 16 4.75v5a3.75 3.75 0 0 1-3.75 3.75H9.81l1.018 1.018a.75.75 0 1 1-1.06 1.06L6.939 12.75l2.829-2.828a.75.75 0 1 1 1.06 1.06L9.811 12h2.439a2.25 2.25 0 0 0 2.25-2.25v-5a2.25 2.25 0 0 0-2.25-2.25h-8.5a2.25 2.25 0 0 0-2.25 2.25v5A2.25 2.25 0 0 0 3.75 12H5v1.5H3.75A3.75 3.75 0 0 1 0 9.75v-5z"
+                                fill="currentColor" />
+                        </svg>
+                    </button>
+                </div>
+                <div class="progress-bar-container">
+                    <span class="time-current" id="time-current">2:05</span>
+                    <div class="progress-bar">
+                        <div class="progress-bar-bg">
+                            <div class="progress-bar-fill" id="progress-fill" style="width: 50%;"></div>
+                            <div class="progress-handle" id="progress-handle" style="left: 50%;"></div>
+                        </div>
+                    </div>
+                    <span class="time-total" id="time-total">2:38</span>
+                </div>
+            </div>
+
+            <div class="player-right">
+                <div class="volume-control">
+                    <button class="control-btn volume-btn" title="Silenciar">
+                        <svg viewBox="0 0 16 16" width="16" height="16">
+                            <path
+                                d="M9.741.85a.75.75 0 0 1 .75.75v13.5a.75.75 0 0 1-1.218.585L4.741 11H1.75A.75.75 0 0 1 1 10.25v-4.5a.75.75 0 0 1 .75-.75h2.991l4.532-4.685A.75.75 0 0 1 9.741.85zM11 3.5a.75.75 0 0 1 .75.75v7.5a.75.75 0 0 1-1.5 0v-7.5A.75.75 0 0 1 11 3.5zm2.5-1.25a.75.75 0 0 1 .75.75v10a.75.75 0 0 1-1.5 0V3a.75.75 0 0 1 .75-.75z"
+                                fill="currentColor" />
+                        </svg>
+                    </button>
+                    <div class="volume-bar">
+                        <div class="volume-bar-bg">
+                            <div class="volume-bar-fill" id="volume-fill" style="width: 80%;"></div>
+                            <div class="volume-handle" id="volume-handle" style="left: 80%;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    
+    
+        </div>
+    </div>
+
+    <audio id="audio-player" preload="metadata"></audio>
+
+    <script src="/js/app.js"></script>
+    
+    
+</body>
+
+</html>

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Generador de Placeholders</title>
+</head>
+
+<body>
+    <canvas id="canvas" width="800" height="800"></canvas>
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        // Crear gradiente
+        const gradient = ctx.createLinearGradient(0, 0, 800, 800);
+        gradient.addColorStop(0, '#667eea');
+        gradient.addColorStop(1, '#764ba2');
+
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, 800, 800);
+
+        // Agregar círculo
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+        ctx.beginPath();
+        ctx.arc(400, 400, 200, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Descargar
+        const link = document.createElement('a');
+        link.download = 'placeholder-cover.jpg';
+        link.href = canvas.toDataURL('image/jpeg');
+        link.click();
+    </script>
+</body>
+
+</html>
