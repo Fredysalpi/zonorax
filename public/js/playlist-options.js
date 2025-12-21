@@ -1,21 +1,34 @@
+```javascript
 // ===== OPCIONES DE PLAYLIST =====
-window.togglePlaylistOptions = function (event, playlistId) {
+window.togglePlaylistOptions = function(event, playlistId) {
     event.stopPropagation();
+    const button = event.currentTarget;
     const popup = document.getElementById('playlist-options-popup');
-    popup.style.display = popup.style.display === 'none' ? 'block' : 'none';
-
-    // Cerrar al hacer clic fuera
-    if (popup.style.display === 'block') {
+    
+    if (popup.style.display === 'none' || !popup.style.display) {
+        // Obtener posición del botón
+        const buttonRect = button.getBoundingClientRect();
+        
+        // Posicionar el popup justo debajo del botón
+        popup.style.position = 'fixed';
+        popup.style.top = buttonRect.bottom + 5 + 'px';
+        popup.style.left = (buttonRect.right - 160) + 'px';
+        popup.style.display = 'block';
+        
+        // Cerrar al hacer clic fuera
         setTimeout(() => {
             document.addEventListener('click', function closePopup(e) {
-                if (!popup.contains(e.target) && e.target.id !== 'playlist-options-btn') {
+                if (!popup.contains(e.target) && !button.contains(e.target)) {
                     popup.style.display = 'none';
                     document.removeEventListener('click', closePopup);
                 }
             });
         }, 10);
+    } else {
+        popup.style.display = 'none';
     }
 }
+
 
 window.editPlaylist = async function (playlistId) {
     // Cerrar popup de opciones
@@ -23,39 +36,39 @@ window.editPlaylist = async function (playlistId) {
 
     try {
         // Obtener datos actuales de la playlist
-        const response = await fetch(`${API_BASE_URL}/playlists/${playlistId}`);
+        const response = await fetch(`${ API_BASE_URL } /playlists/${ playlistId } `);
         const playlist = await response.json();
 
         // Crear modal de edición
         const modal = document.createElement('div');
         modal.id = 'edit-playlist-modal';
         modal.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.8);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 10000;
-        `;
+position: fixed;
+top: 0;
+left: 0;
+right: 0;
+bottom: 0;
+background: rgba(0, 0, 0, 0.8);
+display: flex;
+align - items: center;
+justify - content: center;
+z - index: 10000;
+`;
 
         modal.innerHTML = `
-            <div style="
-                background: var(--bg-elevated);
-                border-radius: 8px;
-                padding: 32px;
-                max-width: 600px;
-                width: 90%;
-                box-shadow: 0 8px 24px rgba(0,0,0,0.5);
-                max-height: 90vh;
-                overflow-y: auto;
-            ">
-                <h2 style="font-size: 24px; font-weight: 700; margin-bottom: 24px; color: var(--text-base);">Editar playlist</h2>
+    < div style = "
+background: var(--bg - elevated);
+border - radius: 8px;
+padding: 32px;
+max - width: 600px;
+width: 90 %;
+box - shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+max - height: 90vh;
+overflow - y: auto;
+">
+    < h2 style = "font-size: 24px; font-weight: 700; margin-bottom: 24px; color: var(--text-base);" > Editar playlist</h2 >
                 
-                <!-- Imagen de portada -->
+                < !--Imagen de portada-- >
                 <div style="margin-bottom: 24px;">
                     <label style="display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px; color: var(--text-base);">Imagen de portada</label>
                     <div style="display: flex; align-items: center; gap: 16px;">
@@ -93,7 +106,7 @@ window.editPlaylist = async function (playlistId) {
                     </div>
                 </div>
                 
-                <!-- Nombre -->
+                <!--Nombre -->
                 <div style="margin-bottom: 24px;">
                     <label style="display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px; color: var(--text-base);">Nombre</label>
                     <input type="text" id="edit-playlist-name" value="${playlist.name}" style="
@@ -107,7 +120,7 @@ window.editPlaylist = async function (playlistId) {
                     ">
                 </div>
                 
-                <!-- Descripción -->
+                <!--Descripción -->
                 <div style="margin-bottom: 24px;">
                     <label style="display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px; color: var(--text-base);">Descripción</label>
                     <textarea id="edit-playlist-description" style="
@@ -123,7 +136,7 @@ window.editPlaylist = async function (playlistId) {
                     ">${playlist.description || ''}</textarea>
                 </div>
                 
-                <!-- Pública -->
+                <!--Pública -->
                 <div style="margin-bottom: 24px;">
                     <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
                         <input type="checkbox" id="edit-playlist-public" ${playlist.is_public ? 'checked' : ''} style="width: 16px; height: 16px; cursor: pointer;">
@@ -153,8 +166,8 @@ window.editPlaylist = async function (playlistId) {
                         cursor: pointer;
                     ">Guardar cambios</button>
                 </div>
-            </div>
-        `;
+            </div >
+    `;
 
         document.body.appendChild(modal);
 
@@ -177,7 +190,7 @@ window.editPlaylist = async function (playlistId) {
 
                 const reader = new FileReader();
                 reader.onload = function (e) {
-                    coverPreview.innerHTML = `<img src="${e.target.result}" style="width: 100%; height: 100%; object-fit: cover;">`;
+                    coverPreview.innerHTML = `< img src = "${e.target.result}" style = "width: 100%; height: 100%; object-fit: cover;" > `;
                     window.tempPlaylistCoverFile = file;
                 };
                 reader.readAsDataURL(file);
@@ -221,11 +234,11 @@ async function updatePlaylistData(playlistId) {
         const token = localStorage.getItem('authToken');
 
         // Actualizar datos básicos
-        const response = await fetch(`${API_BASE_URL}/playlists/${playlistId}`, {
+        const response = await fetch(`${ API_BASE_URL } /playlists/${ playlistId } `, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
+                'Authorization': `Bearer ${ token } `
             },
             body: JSON.stringify({
                 name,
@@ -243,27 +256,27 @@ async function updatePlaylistData(playlistId) {
             const formData = new FormData();
             formData.append('cover', window.tempPlaylistCoverFile);
 
-            await fetch(`${API_BASE_URL}/playlists/${playlistId}/cover`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                },
-                body: formData
+            await fetch(`${ API_BASE_URL } /playlists/${ playlistId }/cover`, {
+method: 'POST',
+    headers: {
+    'Authorization': `Bearer ${token}`
+},
+body: formData
             });
 
-            delete window.tempPlaylistCoverFile;
+delete window.tempPlaylistCoverFile;
         }
 
-        alert('✅ Playlist actualizada correctamente');
+alert('✅ Playlist actualizada correctamente');
 
-        // Recargar playlists y vista actual
-        await loadPlaylists();
-        await loadPlaylistSongs(playlistId);
+// Recargar playlists y vista actual
+await loadPlaylists();
+await loadPlaylistSongs(playlistId);
 
     } catch (error) {
-        console.error('Error updating playlist:', error);
-        alert('❌ Error al actualizar la playlist: ' + error.message);
-    }
+    console.error('Error updating playlist:', error);
+    alert('❌ Error al actualizar la playlist: ' + error.message);
+}
 }
 
 window.deletePlaylist = async function (playlistId) {

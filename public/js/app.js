@@ -627,8 +627,8 @@ async function loadPlaylistSongs(playlistId) {
                                 box-shadow: 0 4px 12px rgba(0,0,0,0.5);
                                 min-width: 160px;
                                 z-index: 1000;
-                                margin-top: 8px;
-                                right: 24px;
+                                top: 50px;
+                                right: 0;
                             ">
                                 <button onclick="editPlaylist(${playlistId})" style="
                                     width: 100%;
@@ -671,21 +671,42 @@ async function loadPlaylistSongs(playlistId) {
                         ${playlist.description ? `<p style="font-size: 14px; color: var(--text-subdued); margin-bottom: 16px;">${playlist.description}</p>` : ''}
                         <div style="display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600;">
                             <!-- Avatar del usuario -->
-                            <div style="
-                                width: 24px;
-                                height: 24px;
-                                border-radius: 50%;
-                                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                                display: flex;
-                                align-items: center;
-                                justify-content: center;
-                                font-size: 12px;
-                                font-weight: 700;
-                                color: white;
-                            ">
-                                ${(playlist.user_name || 'U').charAt(0).toUpperCase()}
-                            </div>
-                            <span>${playlist.user_name || 'Usuario'}</span>
+                            ${(() => {
+                const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+                const userName = currentUser.username || playlist.username || 'Usuario';
+                const userInitial = userName.charAt(0).toUpperCase();
+                const profileImage = currentUser.profile_image;
+
+                if (profileImage) {
+                    return `<div style="
+                                        width: 24px;
+                                        height: 24px;
+                                        border-radius: 50%;
+                                        overflow: hidden;
+                                    ">
+                                        <img src="${profileImage}" style="width: 100%; height: 100%; object-fit: cover;">
+                                    </div>`;
+                } else {
+                    return `<div style="
+                                        width: 24px;
+                                        height: 24px;
+                                        border-radius: 50%;
+                                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                                        display: flex;
+                                        align-items: center;
+                                        justify-content: center;
+                                        font-size: 12px;
+                                        font-weight: 700;
+                                        color: white;
+                                    ">
+                                        ${userInitial}
+                                    </div>`;
+                }
+            })()}
+                            <span>${(() => {
+                const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+                return currentUser.username || playlist.username || 'Usuario';
+            })()}</span>
                             <span>•</span>
                             <span>${currentPlaylist.length} canciones</span>
                             ${currentPlaylist.length > 0 ? `<span>•</span><span>cerca de ${durationText}</span>` : ''}
