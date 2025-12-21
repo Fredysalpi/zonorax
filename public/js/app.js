@@ -49,6 +49,134 @@ let navigationHistory = [];
 let navigationIndex = -1;
 let isNavigating = false;
 
+// ===== FUNCIÓN PARA VOLVER A LA PÁGINA PRINCIPAL =====
+function goHome() {
+    const contentWrapper = document.querySelector('.content-wrapper');
+
+    contentWrapper.innerHTML = `
+        <section class="djs-section">
+            <h2 style="font-size: 24px; font-weight: 700; margin-bottom: 24px; color: var(--text-base);">DJs Destacados</h2>
+            <div class="djs-grid" id="djs-grid">
+                <!-- DJs se cargarán aquí -->
+            </div>
+        </section>
+
+        <section class="featured-section">
+            <div class="featured-grid" id="featured-playlists">
+                <!-- Playlists destacadas se cargarán aquí -->
+            </div>
+        </section>
+
+        <section class="releases-section">
+            <div class="section-header">
+                <h2>Viernes de lanzamientos</h2>
+                <a href="#" class="show-all">Mostrar todo</a>
+            </div>
+            <div class="releases-grid" id="releases-grid">
+                <!-- Lanzamientos se cargarán aquí -->
+            </div>
+        </section>
+    `;
+
+    // Recargar el contenido
+    loadDJs();
+    loadFeaturedPlaylists();
+    loadReleases();
+    saveNavigationState();
+}
+
+// ===== FUNCIONES DE NAVEGACIÓN (ATRÁS/ADELANTE) =====
+function navigateBack() {
+    if (navigationIndex > 0) {
+        isNavigating = true;
+        navigationIndex--;
+        const state = navigationHistory[navigationIndex];
+        restoreNavigationState(state);
+        updateNavigationButtons();
+    }
+}
+
+function navigateForward() {
+    if (navigationIndex < navigationHistory.length - 1) {
+        isNavigating = true;
+        navigationIndex++;
+        const state = navigationHistory[navigationIndex];
+        restoreNavigationState(state);
+        updateNavigationButtons();
+    }
+}
+
+function saveNavigationState() {
+    if (isNavigating) {
+        isNavigating = false;
+        return;
+    }
+
+    const contentWrapper = document.querySelector('.content-wrapper');
+    const state = {
+        html: contentWrapper.innerHTML,
+        scrollPosition: contentWrapper.scrollTop
+    };
+
+    // Si no estamos al final del historial, eliminar el historial hacia adelante
+    if (navigationIndex < navigationHistory.length - 1) {
+        navigationHistory = navigationHistory.slice(0, navigationIndex + 1);
+    }
+
+    navigationHistory.push(state);
+    navigationIndex = navigationHistory.length - 1;
+    updateNavigationButtons();
+}
+
+function restoreNavigationState(state) {
+    const contentWrapper = document.querySelector('.content-wrapper');
+    contentWrapper.innerHTML = state.html;
+    contentWrapper.scrollTop = state.scrollPosition;
+
+    // Re-inicializar event listeners si es necesario
+    setTimeout(() => {
+        isNavigating = false;
+    }, 100);
+}
+
+function updateNavigationButtons() {
+    const backBtn = document.querySelector('.nav-buttons .nav-btn:first-child');
+    const forwardBtn = document.querySelector('.nav-buttons .nav-btn:last-child');
+
+    if (backBtn) {
+        backBtn.disabled = navigationIndex <= 0;
+        backBtn.style.opacity = navigationIndex <= 0 ? '0.5' : '1';
+        backBtn.style.cursor = navigationIndex <= 0 ? 'not-allowed' : 'pointer';
+    }
+
+    if (forwardBtn) {
+        forwardBtn.disabled = navigationIndex >= navigationHistory.length - 1;
+        forwardBtn.style.opacity = navigationIndex >= navigationHistory.length - 1 ? '0.5' : '1';
+        forwardBtn.style.cursor = navigationIndex >= navigationHistory.length - 1 ? 'not-allowed' : 'pointer';
+    }
+}
+
+function initializeNavigationButtons() {
+    const backBtn = document.querySelector('.nav-buttons .nav-btn:first-child');
+    const forwardBtn = document.querySelector('.nav-buttons .nav-btn:last-child');
+
+    if (backBtn) {
+        backBtn.addEventListener('click', navigateBack);
+    }
+
+    if (forwardBtn) {
+        forwardBtn.addEventListener('click', navigateForward);
+    }
+
+    updateNavigationButtons();
+}
+
+// Hacer las funciones globales
+window.goHome = goHome;
+window.navigateBack = navigateBack;
+window.navigateForward = navigateForward;
+
+
 // ===== ELEMENTOS DEL DOM =====
 const audioPlayer = document.getElementById('audio-player');
 const playPauseBtn = document.getElementById('play-pause-btn');
@@ -174,6 +302,7 @@ async function loadReleases() {
             <div class="release-card" data-song-index="${index}">
                 ${index === 0 ? '<div class="release-badge">HOT NOW!</div>' : ''}
                 <div class="release-card-image" style="background: linear-gradient(135deg, ${getRandomGradient()});">
+                        ${song.cover_image ? `<img src="${song.cover_image}" alt="${song.title}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px; position: absolute; top: 0; left: 0;">` : ''}
                     <button class="play-button">
                         <svg viewBox="0 0 24 24">
                             <path d="M8 5v14l11-7z" fill="currentColor"/>
