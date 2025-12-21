@@ -1,4 +1,3 @@
-```javascript
 // ===== OPCIONES DE PLAYLIST =====
 window.togglePlaylistOptions = function(event, playlistId) {
     event.stopPropagation();
