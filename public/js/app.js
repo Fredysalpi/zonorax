@@ -597,9 +597,94 @@ async function loadPlaylistSongs(playlistId) {
                         <div style="font-size: 12px; font-weight: 700; text-transform: uppercase; margin-bottom: 8px;">
                             ${playlist.is_public ? 'Playlist pública' : 'Playlist privada'}
                         </div>
-                        <h1 style="font-size: 72px; font-weight: 900; margin-bottom: 16px; line-height: 1;">${playlist.name}</h1>
+                        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+                            <h1 style="font-size: 72px; font-weight: 900; line-height: 1; margin: 0;">${playlist.name}</h1>
+                            <!-- Botón de opciones (3 puntos) -->
+                            <button id="playlist-options-btn" onclick="togglePlaylistOptions(event, ${playlistId})" style="
+                                width: 40px;
+                                height: 40px;
+                                border-radius: 50%;
+                                background: rgba(0,0,0,0.3);
+                                border: none;
+                                color: var(--text-base);
+                                cursor: pointer;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                position: relative;
+                                transition: background 0.2s;
+                            " onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(0,0,0,0.3)'">
+                                <svg viewBox="0 0 16 16" width="20" height="20">
+                                    <path d="M3 8a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm6.5 0a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zM16 8a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z" fill="currentColor"/>
+                                </svg>
+                            </button>
+                            <!-- Popup de opciones -->
+                            <div id="playlist-options-popup" style="
+                                display: none;
+                                position: absolute;
+                                background: var(--bg-elevated);
+                                border-radius: 4px;
+                                box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+                                min-width: 160px;
+                                z-index: 1000;
+                                margin-top: 8px;
+                                right: 24px;
+                            ">
+                                <button onclick="editPlaylist(${playlistId})" style="
+                                    width: 100%;
+                                    padding: 12px 16px;
+                                    background: none;
+                                    border: none;
+                                    color: var(--text-base);
+                                    text-align: left;
+                                    cursor: pointer;
+                                    font-size: 14px;
+                                    display: flex;
+                                    align-items: center;
+                                    gap: 12px;
+                                " onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='none'">
+                                    <svg viewBox="0 0 16 16" width="16" height="16">
+                                        <path d="M11.013 1.427a1.75 1.75 0 0 1 2.474 0l1.086 1.086a1.75 1.75 0 0 1 0 2.474l-8.61 8.61c-.21.21-.47.364-.756.445l-3.251.93a.75.75 0 0 1-.927-.928l.929-3.25a1.75 1.75 0 0 1 .445-.758l8.61-8.61zm1.414 1.06a.25.25 0 0 0-.354 0L10.811 3.75l1.439 1.44 1.263-1.263a.25.25 0 0 0 0-.354l-1.086-1.086zM11.189 6.25L9.75 4.81l-6.286 6.287a.25.25 0 0 0-.064.108l-.558 1.953 1.953-.558a.249.249 0 0 0 .108-.064l6.286-6.286z" fill="currentColor"/>
+                                    </svg>
+                                    Editar
+                                </button>
+                                <button onclick="deletePlaylist(${playlistId})" style="
+                                    width: 100%;
+                                    padding: 12px 16px;
+                                    background: none;
+                                    border: none;
+                                    color: #ff4444;
+                                    text-align: left;
+                                    cursor: pointer;
+                                    font-size: 14px;
+                                    display: flex;
+                                    align-items: center;
+                                    gap: 12px;
+                                " onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='none'">
+                                    <svg viewBox="0 0 16 16" width="16" height="16">
+                                        <path d="M11 1.75V3h2.25a.75.75 0 0 1 0 1.5H2.75a.75.75 0 0 1 0-1.5H5V1.75C5 .784 5.784 0 6.75 0h2.5C10.216 0 11 .784 11 1.75zM4.496 6.675a.75.75 0 1 0-1.492.15l.66 6.6A1.75 1.75 0 0 0 5.405 15h5.19c.9 0 1.652-.681 1.741-1.576l.66-6.6a.75.75 0 0 0-1.492-.149l-.66 6.6a.25.25 0 0 1-.249.225h-5.19a.25.25 0 0 1-.249-.225l-.66-6.6z" fill="currentColor"/>
+                                    </svg>
+                                    Eliminar
+                                </button>
+                            </div>
+                        </div>
                         ${playlist.description ? `<p style="font-size: 14px; color: var(--text-subdued); margin-bottom: 16px;">${playlist.description}</p>` : ''}
                         <div style="display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600;">
+                            <!-- Avatar del usuario -->
+                            <div style="
+                                width: 24px;
+                                height: 24px;
+                                border-radius: 50%;
+                                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                font-size: 12px;
+                                font-weight: 700;
+                                color: white;
+                            ">
+                                ${(playlist.user_name || 'U').charAt(0).toUpperCase()}
+                            </div>
                             <span>${playlist.user_name || 'Usuario'}</span>
                             <span>•</span>
                             <span>${currentPlaylist.length} canciones</span>
@@ -629,11 +714,6 @@ async function loadPlaylistSongs(playlistId) {
                                 ▶
                             </button>
                         ` : ''}
-                        <button class="icon-btn" title="Más opciones" style="width: 32px; height: 32px;">
-                            <svg viewBox="0 0 16 16" width="16" height="16">
-                                <path d="M3 8a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm6.5 0a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zM16 8a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z" fill="currentColor"/>
-                            </svg>
-                        </button>
                     </div>
                     
                     ${currentPlaylist.length > 0 ? `
