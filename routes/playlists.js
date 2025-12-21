@@ -1,4 +1,8 @@
 const express = require('express');
+const { authenticate } = require('../middleware/auth');
+const upload = require('../config/multer');
+const fs = require('fs');
+const path = require('path');
 const router = express.Router();
 const db = require('../config/database');
 
@@ -124,6 +128,125 @@ router.post('/:id/songs', async (req, res) => {
         );
 
         res.status(201).json({ message: 'Canción agregada a la playlist' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Actualizar playlist
+router.put('/:id', authenticate, async (req, res) => {
+    try {
+        const { name, description, is_public } = req.body;
+        const playlistId = req.params.id;
+        const userId = req.user.userId;
+
+        // Verificar que la playlist pertenece al usuario
+        const [playlists] = await db.query(
+            'SELECT * FROM playlists WHERE id = ? AND user_id = ?',
+            [playlistId, userId]
+        );
+
+        if (playlists.length === 0) {
+            return res.status(403).json({ error: 'No tienes permiso para editar esta playlist' });
+        }
+
+        await db.query(
+            'UPDATE playlists SET name = ?, description = ?, is_public = ? WHERE id = ?',
+            [name, description, is_public, playlistId]
+        );
+
+        res.json({ success: true, message: 'Playlist actualizada correctamente' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Subir imagen de portada de playlist
+router.post('/:id/cover', authenticate, upload.single('cover'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: 'No se proporcionó ninguna imagen' });
+        }
+
+        const playlistId = req.params.id;
+        const userId = req.user.userId;
+        const imageUrl = `/uploads/profiles/${req.file.filename}`;
+
+        // Verificar que la playlist pertenece al usuario
+        const [playlists] = await db.query(
+            'SELECT cover_image FROM playlists WHERE id = ? AND user_id = ?',
+            [playlistId, userId]
+        );
+
+        if (playlists.length === 0) {
+            // Eliminar archivo subido
+            fs.unlinkSync(req.file.path);
+            return res.status(403).json({ error: 'No tienes permiso para editar esta playlist' });
+        }
+
+        const oldImage = playlists[0]?.cover_image;
+
+        // Actualizar base de datos
+        await db.query(
+            'UPDATE playlists SET cover_image = ? WHERE id = ?',
+            [imageUrl, playlistId]
+        );
+
+        // Eliminar imagen anterior si existe
+        if (oldImage) {
+            const oldImagePath = path.join(__dirname, '..', oldImage);
+            if (fs.existsSync(oldImagePath)) {
+                fs.unlinkSync(oldImagePath);
+            }
+        }
+
+        res.json({
+            success: true,
+            imageUrl: imageUrl,
+            message: 'Imagen de portada actualizada correctamente'
+        });
+    } catch (error) {
+        // Si hay error, eliminar el archivo subido
+        if (req.file) {
+            fs.unlinkSync(req.file.path);
+        }
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Eliminar playlist
+router.delete('/:id', authenticate, async (req, res) => {
+    try {
+        const playlistId = req.params.id;
+        const userId = req.user.userId;
+
+        // Verificar que la playlist pertenece al usuario
+        const [playlists] = await db.query(
+            'SELECT cover_image FROM playlists WHERE id = ? AND user_id = ?',
+            [playlistId, userId]
+        );
+
+        if (playlists.length === 0) {
+            return res.status(403).json({ error: 'No tienes permiso para eliminar esta playlist' });
+        }
+
+        const coverImage = playlists[0]?.cover_image;
+
+        // Eliminar canciones de la playlist
+        await db.query('DELETE FROM playlist_songs WHERE playlist_id = ?', [playlistId]);
+
+        // Eliminar playlist
+        await db.query('DELETE FROM playlists WHERE id = ?', [playlistId]);
+
+        // Eliminar imagen de portada si existe
+        if (coverImage) {
+            const imagePath = path.join(__dirname, '..', coverImage);
+            if (fs.existsSync(imagePath)) {
+                fs.unlinkSync(imagePath);
+            }
+        }
+
+        res.json({ success: true, message: 'Playlist eliminada correctamente' });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

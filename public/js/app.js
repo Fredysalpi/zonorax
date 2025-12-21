@@ -226,11 +226,18 @@ async function loadPlaylists() {
         const response = await fetch(url);
         const playlists = await response.json();
 
+        // Ordenar: "Me Gusta" primero, luego las demás por fecha de creación
+        playlists.sort((a, b) => {
+            if (a.name === 'Me Gusta') return -1;
+            if (b.name === 'Me Gusta') return 1;
+            return new Date(b.created_at) - new Date(a.created_at);
+        });
+
         const container = document.getElementById('playlists-container');
         container.innerHTML = playlists.map(playlist => `
             <div class="playlist-item" data-playlist-id="${playlist.id}">
-                <div class="playlist-cover" style="background: linear-gradient(135deg, ${getRandomGradient()});">
-                    ${playlist.cover_image ? `<img src="${playlist.cover_image}" alt="${playlist.name}">` : ''}
+                <div class="playlist-cover" style="background: linear-gradient(135deg, ${getRandomGradient()}); width: 48px; height: 48px; min-width: 48px; min-height: 48px; border-radius: 4px; overflow: hidden;">
+                    ${playlist.cover_image ? `<img src="${playlist.cover_image}" alt="${playlist.name}" style="width: 100%; height: 100%; object-fit: cover;">` : ''}
                 </div>
                 <div class="playlist-info">
                     <div class="playlist-name">${playlist.name}</div>

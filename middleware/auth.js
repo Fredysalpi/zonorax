@@ -30,7 +30,7 @@ async function authenticate(req, res, next) {
             return res.status(401).json({ error: 'Usuario no encontrado' });
         }
 
-        req.user = users[0];
+        req.user = { ...users[0], userId: users[0].id };
         next();
     } catch (error) {
         res.status(401).json({ error: 'Token inválido' });
