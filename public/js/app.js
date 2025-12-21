@@ -1,4 +1,4 @@
-// ===== CONFIGURACIÃ“N Y ESTADO GLOBAL =====
+﻿// ===== CONFIGURACIÃ“N Y ESTADO GLOBAL =====
 const API_BASE_URL = '/api';
 let currentPlaylist = [];
 let currentSongIndex = 0;
@@ -6,6 +6,43 @@ let isPlaying = false;
 let currentVolume = 0.8;
 let isShuffle = false;
 let repeatMode = 'off';
+
+// ===== FUNCIONES AUXILIARES =====
+function formatTime(seconds) {
+    if (isNaN(seconds)) return '0:00';
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `:`;
+}
+
+function getRandomGradient() {
+    const gradients = [
+        '#667eea 0%, #764ba2 100%',
+        '#f093fb 0%, #f5576c 100%',
+        '#4facfe 0%, #00f2fe 100%',
+        '#43e97b 0%, #38f9d7 100%',
+        '#fa709a 0%, #fee140 100%',
+        '#30cfd0 0%, #330867 100%',
+        '#a8edea 0%, #fed6e3 100%',
+        '#ff9a9e 0%, #fecfef 100%',
+        '#ffecd2 0%, #fcb69f 100%',
+        '#ff6e7f 0%, #bfe9ff 100%'
+    ];
+    return gradients[Math.floor(Math.random() * gradients.length)];
+}
+
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
 
 // ===== HISTORIAL DE NAVEGACIÃ“N =====
 let navigationHistory = [];
@@ -160,6 +197,28 @@ async function loadReleases() {
         });
     } catch (error) {
         console.error('Error loading releases:', error);
+    }
+}
+
+async function loadDJs() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/artists`);
+        const artists = await response.json();
+
+        const container = document.getElementById('djs-grid');
+        const djs = artists.filter(a => a.is_verified).slice(0, 4);
+
+        container.innerHTML = djs.map(dj => `
+            \u003cdiv class="dj-card" onclick="showArtistPage(${dj.id})" style="cursor: pointer; text-align: center;\u003e
+                \u003cdiv class="dj-image" style="width: 180px; height: 180px; border-radius: 50%; overflow: hidden; margin: 0 auto 16px; background: linear-gradient(135deg, ${getRandomGradient()});\"\u003e
+                    ${dj.image_url ? `\u003cimg src="${dj.image_url}" alt="${dj.name}" style="width: 100%; height: 100%; object-fit: cover;"\u003e` : ''}
+                \u003c/div\u003e
+                \u003cdiv class="dj-name" style="font-size: 16px; font-weight: 700; color: var(--text-base); margin-bottom: 4px;\"\u003e${dj.name}\u003c/div\u003e
+                \u003cdiv class="dj-role" style="font-size: 14px; color: var(--text-subdued);\"\u003eArtista\u003c/div\u003e
+            \u003c/div\u003e
+        `).join('');
+    } catch (error) {
+        console.error('Error loading DJs:', error);
     }
 }
 
@@ -381,159 +440,159 @@ function initializeEventListeners() {
     const mainSearch = document.getElementById('main-search');
     if (mainSearch) {
         mainSearch.addEventListener('input', debounce(async (e) => {
-        const query = e.target.value.trim();
-        if (query.length > 2) {
-            await searchSongs(query);
+            const query = e.target.value.trim();
+            if (query.length > 2) {
+                await searchSongs(query);
+            }
+        }, 300));
+    }
+
+    // ===== NAVEGACIÃ“N (ATRÃS/ADELANTE) =====
+    function saveNavigationState() {
+        if (isNavigating) return;
+
+        const contentWrapper = document.querySelector('.content-wrapper');
+        const state = {
+            html: contentWrapper.innerHTML,
+            timestamp: Date.now()
+        };
+
+        if (navigationIndex < navigationHistory.length - 1) {
+            navigationHistory = navigationHistory.slice(0, navigationIndex + 1);
         }
-    }, 300));
-}
 
-// ===== NAVEGACIÃ“N (ATRÃS/ADELANTE) =====
-function saveNavigationState() {
-    if (isNavigating) return;
+        navigationHistory.push(state);
+        navigationIndex = navigationHistory.length - 1;
 
-    const contentWrapper = document.querySelector('.content-wrapper');
-    const state = {
-        html: contentWrapper.innerHTML,
-        timestamp: Date.now()
-    };
-
-    if (navigationIndex < navigationHistory.length - 1) {
-        navigationHistory = navigationHistory.slice(0, navigationIndex + 1);
-    }
-
-    navigationHistory.push(state);
-    navigationIndex = navigationHistory.length - 1;
-
-    updateNavigationButtons();
-}
-
-function navigateBack() {
-    if (navigationIndex > 0) {
-        isNavigating = true;
-        navigationIndex--;
-        const state = navigationHistory[navigationIndex];
-        document.querySelector('.content-wrapper').innerHTML = state.html;
         updateNavigationButtons();
-
-        reattachContentEventListeners();
-
-        setTimeout(() => { isNavigating = false; }, 100);
-    }
-}
-
-function navigateForward() {
-    if (navigationIndex < navigationHistory.length - 1) {
-        isNavigating = true;
-        navigationIndex++;
-        const state = navigationHistory[navigationIndex];
-        document.querySelector('.content-wrapper').innerHTML = state.html;
-        updateNavigationButtons();
-
-        reattachContentEventListeners();
-
-        setTimeout(() => { isNavigating = false; }, 100);
-    }
-}
-
-function updateNavigationButtons() {
-    const backBtn = document.querySelector('.nav-buttons .nav-btn:first-child');
-    const forwardBtn = document.querySelector('.nav-buttons .nav-btn:last-child');
-
-    if (backBtn) {
-        backBtn.disabled = navigationIndex <= 0;
-        backBtn.style.opacity = navigationIndex <= 0 ? '0.5' : '1';
-        backBtn.style.cursor = navigationIndex <= 0 ? 'not-allowed' : 'pointer';
     }
 
-    if (forwardBtn) {
-        forwardBtn.disabled = navigationIndex >= navigationHistory.length - 1;
-        forwardBtn.style.opacity = navigationIndex >= navigationHistory.length - 1 ? '0.5' : '1';
-        forwardBtn.style.cursor = navigationIndex >= navigationHistory.length - 1 ? 'not-allowed' : 'pointer';
-    }
-}
+    function navigateBack() {
+        if (navigationIndex > 0) {
+            isNavigating = true;
+            navigationIndex--;
+            const state = navigationHistory[navigationIndex];
+            document.querySelector('.content-wrapper').innerHTML = state.html;
+            updateNavigationButtons();
 
-function reattachContentEventListeners() {
-    document.querySelectorAll('.featured-card').forEach(card => {
-        const playBtn = card.querySelector('.play-button');
-        if (playBtn) {
-            playBtn.addEventListener('click', async (e) => {
-                e.stopPropagation();
+            reattachContentEventListeners();
+
+            setTimeout(() => { isNavigating = false; }, 100);
+        }
+    }
+
+    function navigateForward() {
+        if (navigationIndex < navigationHistory.length - 1) {
+            isNavigating = true;
+            navigationIndex++;
+            const state = navigationHistory[navigationIndex];
+            document.querySelector('.content-wrapper').innerHTML = state.html;
+            updateNavigationButtons();
+
+            reattachContentEventListeners();
+
+            setTimeout(() => { isNavigating = false; }, 100);
+        }
+    }
+
+    function updateNavigationButtons() {
+        const backBtn = document.querySelector('.nav-buttons .nav-btn:first-child');
+        const forwardBtn = document.querySelector('.nav-buttons .nav-btn:last-child');
+
+        if (backBtn) {
+            backBtn.disabled = navigationIndex <= 0;
+            backBtn.style.opacity = navigationIndex <= 0 ? '0.5' : '1';
+            backBtn.style.cursor = navigationIndex <= 0 ? 'not-allowed' : 'pointer';
+        }
+
+        if (forwardBtn) {
+            forwardBtn.disabled = navigationIndex >= navigationHistory.length - 1;
+            forwardBtn.style.opacity = navigationIndex >= navigationHistory.length - 1 ? '0.5' : '1';
+            forwardBtn.style.cursor = navigationIndex >= navigationHistory.length - 1 ? 'not-allowed' : 'pointer';
+        }
+    }
+
+    function reattachContentEventListeners() {
+        document.querySelectorAll('.featured-card').forEach(card => {
+            const playBtn = card.querySelector('.play-button');
+            if (playBtn) {
+                playBtn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    const playlistId = card.dataset.playlistId;
+                    await loadPlaylistSongs(playlistId);
+                    playSong(0);
+                });
+            }
+
+            card.addEventListener('click', async () => {
                 const playlistId = card.dataset.playlistId;
                 await loadPlaylistSongs(playlistId);
-                playSong(0);
             });
-        }
-
-        card.addEventListener('click', async () => {
-            const playlistId = card.dataset.playlistId;
-            await loadPlaylistSongs(playlistId);
         });
-    });
 
-    document.querySelectorAll('.release-card').forEach(card => {
-        const playBtn = card.querySelector('.play-button');
-        if (playBtn) {
-            playBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const songIndex = parseInt(card.dataset.songIndex);
-                if (!isNaN(songIndex)) {
-                    playSong(songIndex);
-                }
-            });
+        document.querySelectorAll('.release-card').forEach(card => {
+            const playBtn = card.querySelector('.play-button');
+            if (playBtn) {
+                playBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const songIndex = parseInt(card.dataset.songIndex);
+                    if (!isNaN(songIndex)) {
+                        playSong(songIndex);
+                    }
+                });
+            }
+        });
+    }
+
+    function initializeNavigationButtons() {
+        const backBtn = document.querySelector('.nav-buttons .nav-btn:first-child');
+        const forwardBtn = document.querySelector('.nav-buttons .nav-btn:last-child');
+
+        if (backBtn) {
+            backBtn.addEventListener('click', navigateBack);
         }
-    });
-}
 
-function initializeNavigationButtons() {
-    const backBtn = document.querySelector('.nav-buttons .nav-btn:first-child');
-    const forwardBtn = document.querySelector('.nav-buttons .nav-btn:last-child');
-
-    if (backBtn) {
-        backBtn.addEventListener('click', navigateBack);
-    }
-
-    if (forwardBtn) {
-        forwardBtn.addEventListener('click', navigateForward);
-    }
-
-    updateNavigationButtons();
-}
-
-// ===== BÃšSQUEDA =====
-async function searchSongs(query) {
-    try {
-        const songsResponse = await fetch(`${API_BASE_URL}/songs/search/${encodeURIComponent(query)}`);
-        const songs = await songsResponse.json();
-
-        const artistsResponse = await fetch(`${API_BASE_URL}/artists`);
-        const allArtists = await artistsResponse.json();
-        const artists = allArtists.filter(a =>
-            a.name.toLowerCase().includes(query.toLowerCase())
-        );
-
-        console.log('Resultados:', { canciones: songs.length, artistas: artists.length });
-
-        if (artists.length === 1 && songs.length === 0) {
-            showArtistPage(artists[0].id);
-        } else {
-            displaySearchResults(songs, artists);
+        if (forwardBtn) {
+            forwardBtn.addEventListener('click', navigateForward);
         }
-    } catch (error) {
-        console.error('Error searching:', error);
+
+        updateNavigationButtons();
     }
-}
 
-function displaySearchResults(songs, artists) {
-    const contentWrapper = document.querySelector('.content-wrapper');
+    // ===== BÃšSQUEDA =====
+    async function searchSongs(query) {
+        try {
+            const songsResponse = await fetch(`${API_BASE_URL}/songs/search/${encodeURIComponent(query)}`);
+            const songs = await songsResponse.json();
 
-    let html = '<div class="search-results">';
+            const artistsResponse = await fetch(`${API_BASE_URL}/artists`);
+            const allArtists = await artistsResponse.json();
+            const artists = allArtists.filter(a =>
+                a.name.toLowerCase().includes(query.toLowerCase())
+            );
 
-    if (artists.length > 0) {
-        html += '<div class="section-header"><h2>Artistas</h2></div>';
-        html += '<div class="releases-grid">';
-        artists.forEach(artist => {
-            html += `
+            console.log('Resultados:', { canciones: songs.length, artistas: artists.length });
+
+            if (artists.length === 1 && songs.length === 0) {
+                showArtistPage(artists[0].id);
+            } else {
+                displaySearchResults(songs, artists);
+            }
+        } catch (error) {
+            console.error('Error searching:', error);
+        }
+    }
+
+    function displaySearchResults(songs, artists) {
+        const contentWrapper = document.querySelector('.content-wrapper');
+
+        let html = '<div class="search-results">';
+
+        if (artists.length > 0) {
+            html += '<div class="section-header"><h2>Artistas</h2></div>';
+            html += '<div class="releases-grid">';
+            artists.forEach(artist => {
+                html += `
                 <div class="release-card" onclick="showArtistPage(${artist.id})" style="cursor: pointer;">
                     <div class="release-card-image" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
                         ${artist.image_url ? `<img src="${artist.image_url}" alt="${artist.name}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px;">` : ''}
@@ -542,15 +601,15 @@ function displaySearchResults(songs, artists) {
                     <div class="featured-card-subtitle">Artista</div>
                 </div>
             `;
-        });
-        html += '</div>';
-    }
+            });
+            html += '</div>';
+        }
 
-    if (songs.length > 0) {
-        html += '<div class="section-header"><h2>Canciones</h2></div>';
-        html += '<div class="releases-grid">';
-        songs.forEach((song) => {
-            html += `
+        if (songs.length > 0) {
+            html += '<div class="section-header"><h2>Canciones</h2></div>';
+            html += '<div class="releases-grid">';
+            songs.forEach((song) => {
+                html += `
                 <div class="release-card" onclick="playSongById(${song.id})" style="cursor: pointer;">
                     <div class="release-card-image">
                         ${song.cover_image ? `<img src="${song.cover_image}" alt="${song.title}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px;">` : ''}
@@ -559,32 +618,32 @@ function displaySearchResults(songs, artists) {
                     <div class="featured-card-subtitle">${song.artist_name}</div>
                 </div>
             `;
-        });
+            });
+            html += '</div>';
+        }
+
+        if (artists.length === 0 && songs.length === 0) {
+            html += '<p style="color: var(--text-subdued); padding: 40px; text-align: center;">No se encontraron resultados para "' + document.getElementById('main-search').value + '"</p>';
+        }
+
         html += '</div>';
+        contentWrapper.innerHTML = html;
+
+        saveNavigationState();
     }
 
-    if (artists.length === 0 && songs.length === 0) {
-        html += '<p style="color: var(--text-subdued); padding: 40px; text-align: center;">No se encontraron resultados para "' + document.getElementById('main-search').value + '"</p>';
-    }
+    // ===== PÃGINA DEL ARTISTA =====
+    async function showArtistPage(artistId) {
+        try {
+            const artistResponse = await fetch(`${API_BASE_URL}/artists/${artistId}`);
+            const artist = await artistResponse.json();
 
-    html += '</div>';
-    contentWrapper.innerHTML = html;
+            const songsResponse = await fetch(`${API_BASE_URL}/songs`);
+            const allSongs = await songsResponse.json();
+            const artistSongs = allSongs.filter(s => s.artist_id === artistId);
 
-    saveNavigationState();
-}
-
-// ===== PÃGINA DEL ARTISTA =====
-async function showArtistPage(artistId) {
-    try {
-        const artistResponse = await fetch(`${API_BASE_URL}/artists/${artistId}`);
-        const artist = await artistResponse.json();
-
-        const songsResponse = await fetch(`${API_BASE_URL}/songs`);
-        const allSongs = await songsResponse.json();
-        const artistSongs = allSongs.filter(s => s.artist_id === artistId);
-
-        const contentWrapper = document.querySelector('.content-wrapper');
-        let html = `
+            const contentWrapper = document.querySelector('.content-wrapper');
+            let html = `
             <div class="artist-page">
                 <div class="artist-hero" style="
                     background: linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.7) 100%), 
@@ -634,8 +693,8 @@ async function showArtistPage(artistId) {
                     <div class="song-list" style="margin-bottom: 40px;">
         `;
 
-        artistSongs.forEach((song, index) => {
-            html += `
+            artistSongs.forEach((song, index) => {
+                html += `
                 <div class="song-row" onclick="playSongById(${song.id})" style="
                     display: grid;
                     grid-template-columns: 40px 1fr auto 40px;
@@ -664,14 +723,14 @@ async function showArtistPage(artistId) {
                     </button>
                 </div>
             `;
-        });
+            });
 
-        html += `
+            html += `
                     </div>
         `;
 
-        if (artist.bio || artist.cover_image_2) {
-            html += `
+            if (artist.bio || artist.cover_image_2) {
+                html += `
                 <div class="artist-bio-section" style="
                     background: linear-gradient(180deg, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.8) 100%), 
                                 url('${artist.cover_image_2 || artist.cover_image || ''}');
@@ -693,32 +752,32 @@ async function showArtistPage(artistId) {
                     ` : '<p style="font-size: 16px; color: var(--text-subdued);">No hay biografía disponible.</p>'}
                 </div>
             `;
-        }
+            }
 
-        if (artist.social_links) {
-            try {
-                const socials = typeof artist.social_links === 'string'
-                    ? JSON.parse(artist.social_links)
-                    : artist.social_links;
+            if (artist.social_links) {
+                try {
+                    const socials = typeof artist.social_links === 'string'
+                        ? JSON.parse(artist.social_links)
+                        : artist.social_links;
 
-                if (socials && Object.keys(socials).length > 0) {
-                    html += `
+                    if (socials && Object.keys(socials).length > 0) {
+                        html += `
                         <div style="margin-top: 32px;">
                             <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 16px; color: var(--text-base);">Redes Sociales</h3>
                             <div style="display: flex; flex-wrap: wrap; gap: 12px;">
                     `;
 
-                    Object.entries(socials).forEach(([platform, url]) => {
-                        // Mapeo de plataformas a imágenes PNG
-                        const socialIcons = {
-                            'facebook': '/images/facebook.png',
-                            'instagram': '/images/instagram.png',
-                            'whatsapp': '/images/whatsapp.png'
-                        };
-                        
-                        const iconUrl = socialIcons[platform.toLowerCase()] || '/images/facebook.png';
-                        
-                        html += `
+                        Object.entries(socials).forEach(([platform, url]) => {
+                            // Mapeo de plataformas a imágenes PNG
+                            const socialIcons = {
+                                'facebook': '/images/facebook.png',
+                                'instagram': '/images/instagram.png',
+                                'whatsapp': '/images/whatsapp.png'
+                            };
+
+                            const iconUrl = socialIcons[platform.toLowerCase()] || '/images/facebook.png';
+
+                            html += `
                             <a href="${url}" target="_blank" 
                                 style="display: flex; align-items: center; gap: 8px; padding: 12px 20px; 
                                        background: var(--bg-highlight); border-radius: 24px; 
@@ -730,184 +789,184 @@ async function showArtistPage(artistId) {
                                 <span style="font-size: 14px; font-weight: 600; text-transform: capitalize;">${platform}</span>
                             </a>
                         `;
-                    });
+                        });
 
-                    html += `
+                        html += `
                             </div>
                         </div>
                     `;
+                    }
+                } catch (e) {
+                    console.error('Error parsing social links:', e);
                 }
-            } catch (e) {
-                console.error('Error parsing social links:', e);
             }
-        }
 
-        html += `
+            html += `
                     </div>
                 </div>
             </div>
         `;
 
-        contentWrapper.innerHTML = html;
+            contentWrapper.innerHTML = html;
 
-        saveNavigationState();
+            saveNavigationState();
 
-    } catch (error) {
-        console.error('Error loading artist page:', error);
+        } catch (error) {
+            console.error('Error loading artist page:', error);
+        }
     }
-}
 
-async function playArtistSongs(artistId) {
-    try {
-        const response = await fetch(`${API_BASE_URL}/songs`);
-        const allSongs = await response.json();
-        const artistSongs = allSongs.filter(s => s.artist_id === artistId);
-        if (artistSongs.length > 0) {
-            currentPlaylist = artistSongs;
+    async function playArtistSongs(artistId) {
+        try {
+            const response = await fetch(`${API_BASE_URL}/songs`);
+            const allSongs = await response.json();
+            const artistSongs = allSongs.filter(s => s.artist_id === artistId);
+            if (artistSongs.length > 0) {
+                currentPlaylist = artistSongs;
+                currentSongIndex = 0;
+                playSong(0);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+        }
+    }
+
+    async function playSongById(songId) {
+        try {
+            const response = await fetch(`${API_BASE_URL}/songs/${songId}`);
+            const song = await response.json();
+            currentPlaylist = [song];
             currentSongIndex = 0;
             playSong(0);
+        } catch (error) {
+            console.error('Error:', error);
         }
-    } catch (error) {
-        console.error('Error:', error);
     }
-}
 
-async function playSongById(songId) {
-    try {
-        const response = await fetch(`${API_BASE_URL}/songs/${songId}`);
-        const song = await response.json();
-        currentPlaylist = [song];
-        currentSongIndex = 0;
-        playSong(0);
-    } catch (error) {
-        console.error('Error:', error);
-    }
-}
+    // ===== PÁGINA DEL ARTISTA =====
+    async function playArtistSongs(artistId) {
+        try {
+            const response = await fetch(`${API_BASE_URL}/songs`);
+            const allSongs = await response.json();
+            const artistSongs = allSongs.filter(s => s.artist_id === artistId);
 
-// ===== PÁGINA DEL ARTISTA =====
-async function playArtistSongs(artistId) {
-    try {
-        const response = await fetch(`${API_BASE_URL}/songs`);
-        const allSongs = await response.json();
-        const artistSongs = allSongs.filter(s => s.artist_id === artistId);
-
-        if (artistSongs.length > 0) {
-            currentPlaylist = artistSongs;
-            currentSongIndex = 0;
-            playSong(0);
+            if (artistSongs.length > 0) {
+                currentPlaylist = artistSongs;
+                currentSongIndex = 0;
+                playSong(0);
+            }
+        } catch (error) {
+            console.error('Error playing artist songs:', error);
         }
-    } catch (error) {
-        console.error('Error playing artist songs:', error);
     }
-}
 
-// Función para obtener iconos de redes sociales
-function getSocialIcon(platform) {
-    const icons = {
-        instagram: '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>',
-        facebook: '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>',
-        twitter: '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/></svg>',
-        youtube: '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>',
-        spotify: '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg>',
-        tiktok: '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>',
-        soundcloud: '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M1.175 12.225c-.051 0-.094.046-.101.1l-.233 2.154.233 2.105c.007.058.05.098.101.098.05 0 .09-.04.099-.098l.255-2.105-.27-2.154c0-.057-.045-.1-.09-.1m-.899.828c-.051 0-.09.04-.099.099l-.135 1.326.135 1.303c.009.058.048.099.099.099.05 0 .09-.04.099-.099l.165-1.303-.165-1.326c0-.057-.04-.099-.09-.099m1.83-1.229c-.06 0-.113.051-.113.113l-.195 2.391.195 2.236c0 .061.052.112.113.112s.112-.051.112-.112l.226-2.236-.226-2.391c0-.062-.051-.113-.112-.113m.955-.086c-.068 0-.127.058-.127.126l-.164 2.477.164 2.278c0 .069.059.127.127.127.068 0 .126-.058.126-.127l.189-2.278-.189-2.477c0-.068-.058-.126-.126-.126m.964.139c-.075 0-.138.063-.138.139l-.134 2.338.134 2.191c0 .076.063.139.138.139.076 0 .139-.063.139-.139l.152-2.191-.152-2.338c0-.076-.063-.139-.139-.139m.972-.086c-.084 0-.151.068-.151.152l-.105 2.424.105 2.131c0 .084.067.152.151.152.084 0 .152-.068.152-.152l.121-2.131-.121-2.424c0-.084-.068-.152-.152-.152m.964.086c-.092 0-.166.074-.166.166l-.08 2.338.08 2.098c0 .092.074.166.166.166.091 0 .165-.074.165-.166l.091-2.098-.091-2.338c0-.092-.074-.166-.165-.166m.964-.086c-.1 0-.181.081-.181.181l-.053 2.424.053 2.053c0 .1.081.181.181.181.1 0 .181-.081.181-.181l.061-2.053-.061-2.424c0-.1-.081-.181-.181-.181m.964.086c-.107 0-.195.088-.195.195l-.027 2.338.027 2.008c0 .107.088.195.195.195.107 0 .195-.088.195-.195l.031-2.008-.031-2.338c0-.107-.088-.195-.195-.195m.964-.086c-.115 0-.209.094-.209.209v4.555c0 .115.094.209.209.209.115 0 .209-.094.209-.209V12.209c0-.115-.094-.209-.209-.209m13.084-2.555c-.317 0-.617.062-.899.177-.13-2.513-2.166-4.511-4.652-4.511-1.522 0-2.866.734-3.727 1.866-.12.159-.134.373-.033.546.101.174.289.28.495.28h8.816c1.244 0 2.25 1.006 2.25 2.25s-1.006 2.25-2.25 2.25z"/></svg>',
-        website: '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>'
-    };
-
-    return icons[platform.toLowerCase()] || icons.website;
-}
-
-// ===== UTILIDADES =====
-function formatTime(seconds) {
-    if (isNaN(seconds)) return '0:00';
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-}
-
-function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
+    // Función para obtener iconos de redes sociales
+    function getSocialIcon(platform) {
+        const icons = {
+            instagram: '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>',
+            facebook: '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>',
+            twitter: '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M23.953 4.57a10 10 0 01-2.825.775 4.958 4.958 0 002.163-2.723c-.951.555-2.005.959-3.127 1.184a4.92 4.92 0 00-8.384 4.482C7.69 8.095 4.067 6.13 1.64 3.162a4.822 4.822 0 00-.666 2.475c0 1.71.87 3.213 2.188 4.096a4.904 4.904 0 01-2.228-.616v.06a4.923 4.923 0 003.946 4.827 4.996 4.996 0 01-2.212.085 4.936 4.936 0 004.604 3.417 9.867 9.867 0 01-6.102 2.105c-.39 0-.779-.023-1.17-.067a13.995 13.995 0 007.557 2.209c9.053 0 13.998-7.496 13.998-13.985 0-.21 0-.42-.015-.63A9.935 9.935 0 0024 4.59z"/></svg>',
+            youtube: '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>',
+            spotify: '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg>',
+            tiktok: '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.07-.14 1.61.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg>',
+            soundcloud: '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M1.175 12.225c-.051 0-.094.046-.101.1l-.233 2.154.233 2.105c.007.058.05.098.101.098.05 0 .09-.04.099-.098l.255-2.105-.27-2.154c0-.057-.045-.1-.09-.1m-.899.828c-.051 0-.09.04-.099.099l-.135 1.326.135 1.303c.009.058.048.099.099.099.05 0 .09-.04.099-.099l.165-1.303-.165-1.326c0-.057-.04-.099-.09-.099m1.83-1.229c-.06 0-.113.051-.113.113l-.195 2.391.195 2.236c0 .061.052.112.113.112s.112-.051.112-.112l.226-2.236-.226-2.391c0-.062-.051-.113-.112-.113m.955-.086c-.068 0-.127.058-.127.126l-.164 2.477.164 2.278c0 .069.059.127.127.127.068 0 .126-.058.126-.127l.189-2.278-.189-2.477c0-.068-.058-.126-.126-.126m.964.139c-.075 0-.138.063-.138.139l-.134 2.338.134 2.191c0 .076.063.139.138.139.076 0 .139-.063.139-.139l.152-2.191-.152-2.338c0-.076-.063-.139-.139-.139m.972-.086c-.084 0-.151.068-.151.152l-.105 2.424.105 2.131c0 .084.067.152.151.152.084 0 .152-.068.152-.152l.121-2.131-.121-2.424c0-.084-.068-.152-.152-.152m.964.086c-.092 0-.166.074-.166.166l-.08 2.338.08 2.098c0 .092.074.166.166.166.091 0 .165-.074.165-.166l.091-2.098-.091-2.338c0-.092-.074-.166-.165-.166m.964-.086c-.1 0-.181.081-.181.181l-.053 2.424.053 2.053c0 .1.081.181.181.181.1 0 .181-.081.181-.181l.061-2.053-.061-2.424c0-.1-.081-.181-.181-.181m.964.086c-.107 0-.195.088-.195.195l-.027 2.338.027 2.008c0 .107.088.195.195.195.107 0 .195-.088.195-.195l.031-2.008-.031-2.338c0-.107-.088-.195-.195-.195m.964-.086c-.115 0-.209.094-.209.209v4.555c0 .115.094.209.209.209.115 0 .209-.094.209-.209V12.209c0-.115-.094-.209-.209-.209m13.084-2.555c-.317 0-.617.062-.899.177-.13-2.513-2.166-4.511-4.652-4.511-1.522 0-2.866.734-3.727 1.866-.12.159-.134.373-.033.546.101.174.289.28.495.28h8.816c1.244 0 2.25 1.006 2.25 2.25s-1.006 2.25-2.25 2.25z"/></svg>',
+            website: '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>'
         };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-    };
-}
 
-function getRandomGradient() {
-    const gradients = [
-        '#667eea 0%, #764ba2 100%',
-        '#f093fb 0%, #f5576c 100%',
-        '#4facfe 0%, #00f2fe 100%',
-        '#43e97b 0%, #38f9d7 100%',
-        '#fa709a 0%, #fee140 100%',
-        '#30cfd0 0%, #330867 100%',
-        '#a8edea 0%, #fed6e3 100%',
-        '#ff9a9e 0%, #fecfef 100%',
-        '#ffecd2 0%, #fcb69f 100%',
-        '#ff6e7f 0%, #bfe9ff 100%'
-    ];
-    return gradients[Math.floor(Math.random() * gradients.length)];
-}
+        return icons[platform.toLowerCase()] || icons.website;
+    }
 
-function generateUserAvatar() {
-    const token = localStorage.getItem('authToken');
-    let username = 'Usuario';
+    // ===== UTILIDADES =====
+    function formatTime(seconds) {
+        if (isNaN(seconds)) return '0:00';
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60);
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    }
 
-    if (token) {
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+
+    function getRandomGradient() {
+        const gradients = [
+            '#667eea 0%, #764ba2 100%',
+            '#f093fb 0%, #f5576c 100%',
+            '#4facfe 0%, #00f2fe 100%',
+            '#43e97b 0%, #38f9d7 100%',
+            '#fa709a 0%, #fee140 100%',
+            '#30cfd0 0%, #330867 100%',
+            '#a8edea 0%, #fed6e3 100%',
+            '#ff9a9e 0%, #fecfef 100%',
+            '#ffecd2 0%, #fcb69f 100%',
+            '#ff6e7f 0%, #bfe9ff 100%'
+        ];
+        return gradients[Math.floor(Math.random() * gradients.length)];
+    }
+
+    function generateUserAvatar() {
+        const token = localStorage.getItem('authToken');
+        let username = 'Usuario';
+
+        if (token) {
+            try {
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                username = payload.username || 'Usuario';
+            } catch (e) {
+                console.error('Error parsing token:', e);
+            }
+        }
+
+        const userInitial = document.getElementById('user-initial');
+        if (userInitial) {
+            userInitial.textContent = username.charAt(0).toUpperCase();
+        }
+
+        const userMenuBtn = document.getElementById('user-menu-btn');
+        const userMenuPopup = document.getElementById('user-menu-popup');
+
+        if (userMenuBtn && userMenuPopup) {
+            userMenuBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                userMenuPopup.style.display = userMenuPopup.style.display === 'none' ? 'block' : 'none';
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!userMenuPopup.contains(e.target) && e.target !== userMenuBtn) {
+                    userMenuPopup.style.display = 'none';
+                }
+            });
+        }
+    }
+
+    // ===== PERFIL Y LOGOUT =====
+    function showProfile() {
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+            window.location.href = '/login.html';
+            return;
+        }
+
         try {
             const payload = JSON.parse(atob(token.split('.')[1]));
-            username = payload.username || 'Usuario';
-        } catch (e) {
-            console.error('Error parsing token:', e);
-        }
-    }
 
-    const userInitial = document.getElementById('user-initial');
-    if (userInitial) {
-        userInitial.textContent = username.charAt(0).toUpperCase();
-    }
+            // Obtener datos del usuario desde localStorage
+            const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+            const username = currentUser.username || payload.username || 'Usuario';
+            const email = currentUser.email || payload.email || '';
+            const userId = currentUser.id || payload.userId || payload.id;
 
-    const userMenuBtn = document.getElementById('user-menu-btn');
-    const userMenuPopup = document.getElementById('user-menu-popup');
+            const contentWrapper = document.querySelector('.content-wrapper');
 
-    if (userMenuBtn && userMenuPopup) {
-        userMenuBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            userMenuPopup.style.display = userMenuPopup.style.display === 'none' ? 'block' : 'none';
-        });
-
-        document.addEventListener('click', (e) => {
-            if (!userMenuPopup.contains(e.target) && e.target !== userMenuBtn) {
-                userMenuPopup.style.display = 'none';
-            }
-        });
-    }
-}
-
-// ===== PERFIL Y LOGOUT =====
-function showProfile() {
-    const token = localStorage.getItem('authToken');
-    if (!token) {
-        window.location.href = '/login.html';
-        return;
-    }
-
-    try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-
-        // Obtener datos del usuario desde localStorage
-        const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
-        const username = currentUser.username || payload.username || 'Usuario';
-        const email = currentUser.email || payload.email || '';
-        const userId = currentUser.id || payload.userId || payload.id;
-
-        const contentWrapper = document.querySelector('.content-wrapper');
-
-        contentWrapper.innerHTML = `
+            contentWrapper.innerHTML = `
             <div class="profile-page" style="padding: 40px;" data-user-id="${userId}">
                 <h1 style="font-size: 48px; font-weight: 900; margin-bottom: 32px;">Perfil</h1>
                 
@@ -953,87 +1012,135 @@ function showProfile() {
             </div>
         `;
 
-        document.getElementById('user-menu-popup').style.display = 'none';
+            document.getElementById('user-menu-popup').style.display = 'none';
 
-        saveNavigationState();
+            saveNavigationState();
 
-    } catch (error) {
-        console.error('Error loading profile:', error);
-        alert('Error al cargar el perfil');
-    }
-}
-
-async function updateProfile() {
-    const currentPassword = document.getElementById('profile-current-password').value;
-    const newPassword = document.getElementById('profile-new-password').value;
-    const confirmPassword = document.getElementById('profile-confirm-password').value;
-
-    // Validar que se hayan llenado los campos de contraseña
-    if (!currentPassword && !newPassword && !confirmPassword) {
-        alert('No hay cambios para guardar. Ingresa tu contraseña actual y nueva contraseña para cambiarla.');
-        return;
+        } catch (error) {
+            console.error('Error loading profile:', error);
+            alert('Error al cargar el perfil');
+        }
     }
 
-    // Validar que todos los campos de contraseña estén llenos
-    if (!currentPassword || !newPassword || !confirmPassword) {
-        alert('Por favor, completa todos los campos de contraseña.');
-        return;
-    }
+    async function updateProfile() {
+        const currentPassword = document.getElementById('profile-current-password').value;
+        const newPassword = document.getElementById('profile-new-password').value;
+        const confirmPassword = document.getElementById('profile-confirm-password').value;
 
-    // Validar que las contraseñas nuevas coincidan
-    if (newPassword !== confirmPassword) {
-        alert('Las contraseñas nuevas no coinciden.');
-        return;
-    }
-
-    // Validar longitud mínima de la contraseña
-    if (newPassword.length < 6) {
-        alert('La nueva contraseña debe tener al menos 6 caracteres.');
-        return;
-    }
-
-    try {
-        const token = localStorage.getItem('authToken');
-        const userId = document.querySelector('.profile-page').getAttribute('data-user-id');
-
-        const response = await fetch(`${API_BASE_URL}/users/${userId}/password`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({
-                currentPassword: currentPassword,
-                newPassword: newPassword
-            })
-        });
-
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || 'Error al cambiar la contraseña');
+        // Validar que se hayan llenado los campos de contraseña
+        if (!currentPassword && !newPassword && !confirmPassword) {
+            alert('No hay cambios para guardar. Ingresa tu contraseña actual y nueva contraseña para cambiarla.');
+            return;
         }
 
-        alert('✅ Contraseña actualizada correctamente');
+        // Validar que todos los campos de contraseña estén llenos
+        if (!currentPassword || !newPassword || !confirmPassword) {
+            alert('Por favor, completa todos los campos de contraseña.');
+            return;
+        }
 
-        // Limpiar los campos de contraseña
-        document.getElementById('profile-current-password').value = '';
-        document.getElementById('profile-new-password').value = '';
-        document.getElementById('profile-confirm-password').value = '';
+        // Validar que las contraseñas nuevas coincidan
+        if (newPassword !== confirmPassword) {
+            alert('Las contraseñas nuevas no coinciden.');
+            return;
+        }
 
-    } catch (error) {
-        console.error('Error updating password:', error);
-        alert('❌ Error: ' + error.message);
+        // Validar longitud mínima de la contraseña
+        if (newPassword.length < 6) {
+            alert('La nueva contraseña debe tener al menos 6 caracteres.');
+            return;
+        }
+
+        try {
+            const token = localStorage.getItem('authToken');
+            const userId = document.querySelector('.profile-page').getAttribute('data-user-id');
+
+            const response = await fetch(`${API_BASE_URL}/users/${userId}/password`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    currentPassword: currentPassword,
+                    newPassword: newPassword
+                })
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || 'Error al cambiar la contraseña');
+            }
+
+            alert('✅ Contraseña actualizada correctamente');
+
+            // Limpiar los campos de contraseña
+            document.getElementById('profile-current-password').value = '';
+            document.getElementById('profile-new-password').value = '';
+            document.getElementById('profile-confirm-password').value = '';
+
+        } catch (error) {
+            console.error('Error updating password:', error);
+            alert('❌ Error: ' + error.message);
+        }
     }
-}
 
-function goHome() {
-    const contentWrapper = document.querySelector('.content-wrapper');
+    function goHome() {
+        const contentWrapper = document.querySelector('.content-wrapper');
 
-    contentWrapper.innerHTML = `
+        contentWrapper.innerHTML = `
         <div class="filter-tabs">
             <button class="filter-tab active">Todo</button>
             <button class="filter-tab">MÃºsica</button>
             <button class="filter-tab">Podcasts</button>
         </div>
 
-console.log('🎵 Zonorax Player inicializado');
+`;
+
+        loadPlaylists();
+        loadFeaturedPlaylists();
+        loadReleases();
+        loadDJs();
+        saveNavigationState();
+    }
+
+    // Función auxiliar para formatear tiempo
+    function formatTime(seconds) {
+        if (isNaN(seconds)) return '0:00';
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60);
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    }
+
+    // Función auxiliar para generar gradientes aleatorios
+    function getRandomGradient() {
+        const gradients = [
+            '#667eea 0%, #764ba2 100%',
+            '#f093fb 0%, #f5576c 100%',
+            '#4facfe 0%, #00f2fe 100%',
+            '#43e97b 0%, #38f9d7 100%',
+            '#fa709a 0%, #fee140 100%',
+            '#30cfd0 0%, #330867 100%',
+            '#a8edea 0%, #fed6e3 100%',
+            '#ff9a9e 0%, #fecfef 100%',
+            '#ffecd2 0%, #fcb69f 100%',
+            '#ff6e7f 0%, #bfe9ff 100%'
+        ];
+        return gradients[Math.floor(Math.random() * gradients.length)];
+    }
+
+    // Función debounce
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+
+    console.log('🎵 Zonorax Player inicializado');
+}
