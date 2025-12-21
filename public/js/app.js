@@ -209,13 +209,13 @@ async function loadDJs() {
         const djs = artists.filter(a => a.is_verified).slice(0, 4);
 
         container.innerHTML = djs.map(dj => `
-            \u003cdiv class="dj-card" onclick="showArtistPage(${dj.id})" style="cursor: pointer; text-align: center;\u003e
-                \u003cdiv class="dj-image" style="width: 180px; height: 180px; border-radius: 50%; overflow: hidden; margin: 0 auto 16px; background: linear-gradient(135deg, ${getRandomGradient()});\"\u003e
-                    ${dj.image_url ? `\u003cimg src="${dj.image_url}" alt="${dj.name}" style="width: 100%; height: 100%; object-fit: cover;"\u003e` : ''}
-                \u003c/div\u003e
-                \u003cdiv class="dj-name" style="font-size: 16px; font-weight: 700; color: var(--text-base); margin-bottom: 4px;\"\u003e${dj.name}\u003c/div\u003e
-                \u003cdiv class="dj-role" style="font-size: 14px; color: var(--text-subdued);\"\u003eArtista\u003c/div\u003e
-            \u003c/div\u003e
+            <div class="dj-card" onclick="window.showArtistPage(${dj.id})" style="cursor: pointer; text-align: center;">
+                <div class="dj-image" style="width: 180px; height: 180px; border-radius: 50%; overflow: hidden; margin: 0 auto 16px; background: linear-gradient(135deg, ${getRandomGradient()});">
+                    ${dj.image_url ? `<img src="${dj.image_url}" alt="${dj.name}" style="width: 100%; height: 100%; object-fit: cover;">` : ''}
+                </div>
+                <div class="dj-name" style="font-size: 16px; font-weight: 700; color: var(--text-base); margin-bottom: 4px;">${dj.name}</div>
+                <div class="dj-genre" style="font-size: 14px; color: var(--text-subdued);">${dj.genre || 'Electronica'}</div>
+            </div>
         `).join('');
     } catch (error) {
         console.error('Error loading DJs:', error);
