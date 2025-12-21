@@ -69,7 +69,7 @@ function goHome() {
 
         <section class="releases-section">
             <div class="section-header">
-                <h2>Lanzamientos</h2>
+                <h2>Viernes de lanzamientos</h2>
                 <a href="#" class="show-all">Mostrar todo</a>
             </div>
             <div class="releases-grid" id="releases-grid">
@@ -85,7 +85,7 @@ function goHome() {
 
     // Solo guardar estado si no estamos navegando (para evitar duplicados en el historial)
     if (!isNavigating) {
-        saveToHistory();
+        saveNavigationState('home');
     }
 }
 
@@ -110,7 +110,7 @@ function navigateForward() {
     }
 }
 
-function saveToHistory() {
+function saveNavigationState() {
     if (isNavigating) {
         isNavigating = false;
         return;
@@ -160,7 +160,7 @@ function updateNavigationButtons() {
     }
 }
 
-function initNavButtons() {
+function initializeNavigationButtons() {
     const backBtn = document.querySelector('.nav-buttons .nav-btn:first-child');
     const forwardBtn = document.querySelector('.nav-buttons .nav-btn:last-child');
 
@@ -202,13 +202,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadDJs();
     initializePlayer();
     initializeEventListeners();
-    initNavButtons();
+    initializeNavigationButtons();
     generateUserAvatar();
     setupCreatePlaylist();
     // setupLikeButton eliminado
 
     setTimeout(() => {
-        saveToHistory();
+        saveNavigationState('home');
     }, 500);
 });
 
@@ -581,7 +581,7 @@ function initializeEventListeners() {
     }
 
     // ===== NAVEGACIÃ“N (ATRÃS/ADELANTE) =====
-    function saveToHistory() {
+    function saveNavigationState() {
         if (isNavigating) return;
 
         const contentWrapper = document.querySelector('.content-wrapper');
@@ -677,7 +677,7 @@ function initializeEventListeners() {
         });
     }
 
-    function initNavButtons() {
+    function initializeNavigationButtons() {
         const backBtn = document.querySelector('.nav-buttons .nav-btn:first-child');
         const forwardBtn = document.querySelector('.nav-buttons .nav-btn:last-child');
 
@@ -764,7 +764,7 @@ function initializeEventListeners() {
 
         // Solo guardar estado si no estamos navegando
         if (!isNavigating) {
-            saveToHistory();
+            saveNavigationState('artist', { artistId });
         }
     }
 
@@ -945,7 +945,7 @@ function initializeEventListeners() {
 
             contentWrapper.innerHTML = html;
 
-            saveToHistory();
+            saveNavigationState('artist', { artistId });
 
         } catch (error) {
             console.error('Error loading artist page:', error);
@@ -1150,7 +1150,7 @@ function initializeEventListeners() {
 
             document.getElementById('user-menu-popup').style.display = 'none';
 
-            saveToHistory();
+            saveNavigationState('home');
 
         } catch (error) {
             console.error('Error loading profile:', error);
@@ -1237,7 +1237,7 @@ function initializeEventListeners() {
         loadFeaturedPlaylists();
         loadReleases();
         loadDJs();
-        saveToHistory();
+        saveNavigationState('home');
     }
 
     // Función auxiliar para formatear tiempo
