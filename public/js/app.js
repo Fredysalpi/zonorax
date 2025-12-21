@@ -253,6 +253,194 @@ async function loadPlaylists() {
     }
 }
 
+// ===== CREAR PLAYLIST =====
+function setupCreatePlaylist() {
+    const createBtn = document.getElementById('create-playlist-btn');
+    if (!createBtn) return;
+
+    createBtn.addEventListener('click', () => {
+        showCreatePlaylistModal();
+    });
+}
+
+function showCreatePlaylistModal() {
+    // Crear modal
+    const modal = document.createElement('div');
+    modal.id = 'create-playlist-modal';
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.8);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+    `;
+
+    modal.innerHTML = `
+        <div style="
+            background: var(--bg-elevated);
+            border-radius: 8px;
+            padding: 32px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+        ">
+            <h2 style="font-size: 24px; font-weight: 700; margin-bottom: 24px; color: var(--text-base);">Crear playlist</h2>
+            
+            <div style="margin-bottom: 24px;">
+                <label style="display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px; color: var(--text-base);">Nombre</label>
+                <input type="text" id="playlist-name-input" placeholder="Mi playlist" style="
+                    width: 100%;
+                    padding: 12px;
+                    background: var(--bg-base);
+                    border: 1px solid var(--border-subtle);
+                    border-radius: 4px;
+                    color: var(--text-base);
+                    font-size: 14px;
+                ">
+            </div>
+            
+            <div style="margin-bottom: 24px;">
+                <label style="display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px; color: var(--text-base);">Descripción (opcional)</label>
+                <textarea id="playlist-description-input" placeholder="Agrega una descripción" style="
+                    width: 100%;
+                    padding: 12px;
+                    background: var(--bg-base);
+                    border: 1px solid var(--border-subtle);
+                    border-radius: 4px;
+                    color: var(--text-base);
+                    font-size: 14px;
+                    resize: vertical;
+                    min-height: 80px;
+                "></textarea>
+            </div>
+            
+            <div style="margin-bottom: 24px;">
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <input type="checkbox" id="playlist-public-checkbox" style="width: 16px; height: 16px; cursor: pointer;">
+                    <span style="font-size: 14px; color: var(--text-base);">Hacer pública</span>
+                </label>
+            </div>
+            
+            <div style="display: flex; gap: 12px; justify-content: flex-end;">
+                <button id="cancel-create-playlist" style="
+                    padding: 12px 24px;
+                    background: transparent;
+                    border: 1px solid var(--text-subdued);
+                    border-radius: 24px;
+                    color: var(--text-base);
+                    font-size: 14px;
+                    font-weight: 700;
+                    cursor: pointer;
+                ">Cancelar</button>
+                <button id="confirm-create-playlist" style="
+                    padding: 12px 24px;
+                    background: var(--accent-base);
+                    border: none;
+                    border-radius: 24px;
+                    color: var(--bg-base);
+                    font-size: 14px;
+                    font-weight: 700;
+                    cursor: pointer;
+                ">Crear</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    // Focus en el input de nombre
+    setTimeout(() => {
+        document.getElementById('playlist-name-input').focus();
+    }, 100);
+
+    // Event listeners
+    document.getElementById('cancel-create-playlist').addEventListener('click', () => {
+        modal.remove();
+    });
+
+    document.getElementById('confirm-create-playlist').addEventListener('click', async () => {
+        await createPlaylist();
+        modal.remove();
+    });
+
+    // Cerrar al hacer clic fuera
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.remove();
+        }
+    });
+
+    // Cerrar con ESC
+    const handleEsc = (e) => {
+        if (e.key === 'Escape') {
+            modal.remove();
+            document.removeEventListener('keydown', handleEsc);
+        }
+    };
+    document.addEventListener('keydown', handleEsc);
+}
+
+async function createPlaylist() {
+    const name = document.getElementById('playlist-name-input').value.trim();
+    const description = document.getElementById('playlist-description-input').value.trim();
+    const isPublic = document.getElementById('playlist-public-checkbox').checked;
+
+    if (!name) {
+        alert('Por favor ingresa un nombre para la playlist');
+        return;
+    }
+
+    try {
+        const token = localStorage.getItem('authToken');
+        const userId = getCurrentUserId();
+
+        if (!userId) {
+            alert('Debes iniciar sesión para crear una playlist');
+            return;
+        }
+
+        const response = await fetch(`${API_BASE_URL}/playlists`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                user_id: userId,
+                name: name,
+                description: description || null,
+                is_public: isPublic
+            })
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Error al crear la playlist');
+        }
+
+        const newPlaylist = await response.json();
+
+        // Recargar playlists
+        await loadPlaylists();
+
+        // Mostrar mensaje de éxito
+        alert(`✅ Playlist "${name}" creada exitosamente`);
+
+        // Abrir la nueva playlist
+        if (newPlaylist.id) {
+            await loadPlaylistSongs(newPlaylist.id);
+        }
+    } catch (error) {
+        console.error('Error creating playlist:', error);
+        alert('❌ Error al crear la playlist: ' + error.message);
+    }
+}
+
 async function loadFeaturedPlaylists() {
     try {
         const response = await fetch(`${API_BASE_URL}/playlists`);
@@ -360,9 +548,168 @@ async function loadPlaylistSongs(playlistId) {
         const response = await fetch(`${API_BASE_URL}/playlists/${playlistId}`);
         const playlist = await response.json();
         currentPlaylist = playlist.songs || [];
+
+        // Mostrar la vista de la playlist en el main content
+        const contentWrapper = document.querySelector('.content-wrapper');
+
+        const totalDuration = currentPlaylist.reduce((sum, song) => sum + (song.duration || 0), 0);
+        const hours = Math.floor(totalDuration / 3600);
+        const minutes = Math.floor((totalDuration % 3600) / 60);
+        const durationText = hours > 0 ? `${hours} h ${minutes} min` : `${minutes} min`;
+
+        contentWrapper.innerHTML = `
+            <div class="playlist-page" style="padding: 0;">
+                <!-- Header de la Playlist -->
+                <div class="playlist-header" style="
+                    background: linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.7) 100%), 
+                                linear-gradient(135deg, ${getRandomGradient()});
+                    padding: 80px 24px 40px;
+                    margin: -24px -24px 24px -24px;
+                    border-radius: 8px 8px 0 0;
+                    min-height: 340px;
+                    display: flex;
+                    align-items: flex-end;
+                    gap: 24px;
+                ">
+                    <!-- Cover de la Playlist -->
+                    <div style="
+                        width: 232px;
+                        height: 232px;
+                        background: linear-gradient(135deg, ${getRandomGradient()});
+                        border-radius: 8px;
+                        flex-shrink: 0;
+                        box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        overflow: hidden;
+                    ">
+                        ${playlist.cover_image ?
+                `<img src="${playlist.cover_image}" style="width: 100%; height: 100%; object-fit: cover;">` :
+                `<svg viewBox="0 0 24 24" width="80" height="80" fill="rgba(255,255,255,0.7)">
+                                <path d="M3 22a1 1 0 0 1-1-1V3a1 1 0 0 1 2 0v18a1 1 0 0 1-1 1zM15.5 2.134A1 1 0 0 0 14 3v18a1 1 0 0 0 1.5.866l8-4.5a1 1 0 0 0 0-1.732l-8-4.5zM16 19.268V4.732L21.197 12 16 19.268zM7 2a1 1 0 0 0-1 1v18a1 1 0 1 0 2 0V3a1 1 0 0 0-1-1z" fill="currentColor"/>
+                            </svg>`
+            }
+                    </div>
+                    
+                    <!-- Info de la Playlist -->
+                    <div style="flex: 1;">
+                        <div style="font-size: 12px; font-weight: 700; text-transform: uppercase; margin-bottom: 8px;">
+                            ${playlist.is_public ? 'Playlist pública' : 'Playlist privada'}
+                        </div>
+                        <h1 style="font-size: 72px; font-weight: 900; margin-bottom: 16px; line-height: 1;">${playlist.name}</h1>
+                        ${playlist.description ? `<p style="font-size: 14px; color: var(--text-subdued); margin-bottom: 16px;">${playlist.description}</p>` : ''}
+                        <div style="display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600;">
+                            <span>${playlist.user_name || 'Usuario'}</span>
+                            <span>•</span>
+                            <span>${currentPlaylist.length} canciones</span>
+                            ${currentPlaylist.length > 0 ? `<span>•</span><span>cerca de ${durationText}</span>` : ''}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Controles de la Playlist -->
+                <div style="padding: 24px; background: linear-gradient(180deg, rgba(0,0,0,0.2) 0%, transparent 100%);">
+                    <div style="display: flex; align-items: center; gap: 24px; margin-bottom: 32px;">
+                        ${currentPlaylist.length > 0 ? `
+                            <button onclick="playSong(0)" style="
+                                width: 56px;
+                                height: 56px;
+                                border-radius: 50%;
+                                background: var(--accent-base);
+                                border: none;
+                                color: var(--bg-base);
+                                cursor: pointer;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                font-size: 24px;
+                                transition: all 0.2s;
+                            " onmouseover="this.style.transform='scale(1.06)'" onmouseout="this.style.transform='scale(1)'">
+                                ▶
+                            </button>
+                        ` : ''}
+                        <button class="icon-btn" title="Más opciones" style="width: 32px; height: 32px;">
+                            <svg viewBox="0 0 16 16" width="16" height="16">
+                                <path d="M3 8a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zm6.5 0a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0zM16 8a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z" fill="currentColor"/>
+                            </svg>
+                        </button>
+                    </div>
+                    
+                    ${currentPlaylist.length > 0 ? `
+                        <!-- Lista de Canciones -->
+                        <div style="margin-bottom: 40px;">
+                            <!-- Header de la tabla -->
+                            <div style="
+                                display: grid;
+                                grid-template-columns: 40px 1fr 1fr 40px;
+                                gap: 16px;
+                                padding: 8px 16px;
+                                border-bottom: 1px solid var(--border-subtle);
+                                margin-bottom: 8px;
+                                color: var(--text-subdued);
+                                font-size: 12px;
+                                font-weight: 600;
+                                text-transform: uppercase;
+                            ">
+                                <div style="text-align: center;">#</div>
+                                <div>Título</div>
+                                <div>Álbum</div>
+                                <div style="text-align: center;">
+                                    <svg viewBox="0 0 16 16" width="16" height="16">
+                                        <path d="M8 1.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13zM0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8z" fill="currentColor"/>
+                                        <path d="M8 3.25a.75.75 0 0 1 .75.75v3.25H12a.75.75 0 0 1 0 1.5H7.25V4A.75.75 0 0 1 8 3.25z" fill="currentColor"/>
+                                    </svg>
+                                </div>
+                            </div>
+                            
+                            <!-- Canciones -->
+                            ${currentPlaylist.map((song, index) => `
+                                <div class="song-row" onclick="playSong(${index})" style="
+                                    display: grid;
+                                    grid-template-columns: 40px 1fr 1fr 40px;
+                                    gap: 16px;
+                                    padding: 8px 16px;
+                                    border-radius: 4px;
+                                    cursor: pointer;
+                                    align-items: center;
+                                    transition: background-color 0.2s;
+                                " onmouseover="this.style.backgroundColor='rgba(255,255,255,0.1)'" onmouseout="this.style.backgroundColor='transparent'">
+                                    <div style="display: flex; align-items: center; justify-content: center;">
+                                        <span style="color: var(--text-subdued); font-size: 16px;">${index + 1}</span>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 12px;">
+                                        ${song.cover_image ? `<img src="${song.cover_image}" alt="${song.title}" style="width: 40px; height: 40px; border-radius: 4px;">` : ''}
+                                        <div>
+                                            <div style="font-size: 16px; color: var(--text-base); margin-bottom: 4px;">${song.title}</div>
+                                            <div style="font-size: 14px; color: var(--text-subdued);">${song.artist_name || 'Artista Desconocido'}</div>
+                                        </div>
+                                    </div>
+                                    <div style="color: var(--text-subdued); font-size: 14px;">${song.album_name || '-'}</div>
+                                    <div style="color: var(--text-subdued); font-size: 14px; text-align: center;">${formatTime(song.duration)}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : `
+                        <div style="text-align: center; padding: 60px 20px; color: var(--text-subdued);">
+                            <svg viewBox="0 0 24 24" width="64" height="64" style="margin-bottom: 16px; opacity: 0.5;">
+                                <path d="M3 22a1 1 0 0 1-1-1V3a1 1 0 0 1 2 0v18a1 1 0 0 1-1 1zM15.5 2.134A1 1 0 0 0 14 3v18a1 1 0 0 0 1.5.866l8-4.5a1 1 0 0 0 0-1.732l-8-4.5zM16 19.268V4.732L21.197 12 16 19.268zM7 2a1 1 0 0 0-1 1v18a1 1 0 1 0 2 0V3a1 1 0 0 0-1-1z" fill="currentColor"/>
+                            </svg>
+                            <h3 style="font-size: 24px; font-weight: 700; margin-bottom: 8px;">Esta playlist está vacía</h3>
+                            <p style="font-size: 14px;">Agrega canciones para empezar a escuchar</p>
+                        </div>
+                    `}
+                </div>
+            </div>
+        `;
+
+        // Guardar en historial de navegación
+        saveToHistory();
+
         console.log('Playlist cargada:', playlist.name, currentPlaylist.length, 'canciones');
     } catch (error) {
         console.error('Error loading playlist songs:', error);
+        alert('Error al cargar la playlist');
     }
 }
 
