@@ -82,7 +82,7 @@ function goHome() {
     loadDJs();
     loadFeaturedPlaylists();
     loadReleases();
-    saveNavigationState();
+    saveNavigationState('home');
 }
 
 // ===== FUNCIONES DE NAVEGACIÓN (ATRÁS/ADELANTE) =====
@@ -204,7 +204,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // setupLikeButton eliminado
 
     setTimeout(() => {
-        saveNavigationState();
+        saveNavigationState('home');
     }, 500);
 });
 
@@ -758,7 +758,7 @@ function displaySearchResults(songs, artists) {
         html += '</div>';
         contentWrapper.innerHTML = html;
 
-        saveNavigationState();
+            saveNavigationState('artist', { artistId });
     }
 
     // ===== PÃGINA DEL ARTISTA =====
@@ -938,7 +938,7 @@ window.showArtistPage = async function(artistId) {
 
             contentWrapper.innerHTML = html;
 
-            saveNavigationState();
+            saveNavigationState('artist', { artistId });
 
         } catch (error) {
             console.error('Error loading artist page:', error);
@@ -1143,7 +1143,7 @@ window.playArtistSongs = async function(artistId) {
 
             document.getElementById('user-menu-popup').style.display = 'none';
 
-            saveNavigationState();
+            saveNavigationState('home');
 
         } catch (error) {
             console.error('Error loading profile:', error);
@@ -1230,7 +1230,7 @@ window.playArtistSongs = async function(artistId) {
         loadFeaturedPlaylists();
         loadReleases();
         loadDJs();
-        saveNavigationState();
+        saveNavigationState('home');
     }
 
     // Función auxiliar para formatear tiempo
