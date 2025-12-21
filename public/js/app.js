@@ -560,7 +560,7 @@ function initializeEventListeners() {
     }
 
     // ===== BÃšSQUEDA =====
-    async function searchSongs(query) {
+async function searchSongs(query) {
         try {
             const songsResponse = await fetch(`${API_BASE_URL}/songs/search/${encodeURIComponent(query)}`);
             const songs = await songsResponse.json();
@@ -583,7 +583,7 @@ function initializeEventListeners() {
         }
     }
 
-    function displaySearchResults(songs, artists) {
+function displaySearchResults(songs, artists) {
         const contentWrapper = document.querySelector('.content-wrapper');
 
         let html = '<div class="search-results">';
@@ -633,7 +633,7 @@ function initializeEventListeners() {
     }
 
     // ===== PÃGINA DEL ARTISTA =====
-    async function showArtistPage(artistId) {
+window.showArtistPage = async function(artistId) {
         try {
             const artistResponse = await fetch(`${API_BASE_URL}/artists/${artistId}`);
             const artist = await artistResponse.json();
@@ -816,7 +816,7 @@ function initializeEventListeners() {
         }
     }
 
-    async function playArtistSongs(artistId) {
+window.playArtistSongs = async function(artistId) {
         try {
             const response = await fetch(`${API_BASE_URL}/songs`);
             const allSongs = await response.json();
@@ -831,7 +831,7 @@ function initializeEventListeners() {
         }
     }
 
-    async function playSongById(songId) {
+window.playSongById = async function(songId) {
         try {
             const response = await fetch(`${API_BASE_URL}/songs/${songId}`);
             const song = await response.json();
@@ -844,7 +844,7 @@ function initializeEventListeners() {
     }
 
     // ===== PÁGINA DEL ARTISTA =====
-    async function playArtistSongs(artistId) {
+window.playArtistSongs = async function(artistId) {
         try {
             const response = await fetch(`${API_BASE_URL}/songs`);
             const allSongs = await response.json();
