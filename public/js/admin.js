@@ -3,6 +3,17 @@ const API_BASE_URL = '/api';
 let authToken = localStorage.getItem('authToken');
 let currentUser = null;
 
+// Variables de paginación
+let currentArtistsPage = 1;
+let artistsSearchQuery = '';
+let currentSongsPage = 1;
+let songsSearchQuery = '';
+let currentUsersPage = 1;
+let usersSearchQuery = '';
+let currentUploadsPage = 1;
+let uploadsSearchQuery = '';
+
+
 // ===== ELEMENTOS DEL DOM =====
 const navLinks = document.querySelectorAll('.nav-link[data-section]');
 const sections = document.querySelectorAll('.admin-section');
@@ -90,6 +101,11 @@ function initializeEventListeners() {
 
                 sections.forEach(s => s.classList.remove('active'));
                 document.getElementById(`${sectionId}-section`).classList.add('active');
+
+                // Cargar datos específicos de cada sección
+                if (sectionId === 'users') {
+                    loadUsers(1, '');
+                }
             }
         });
     });
@@ -142,14 +158,20 @@ async function loadDashboardStats() {
 }
 
 // ===== ARTISTAS =====
-async function loadArtists() {
+async function loadArtists(page = 1, search = '') {
     try {
-        const response = await fetch(`${API_BASE_URL}/artists`);
-        const artists = await response.json();
+        const response = await fetch(`${API_BASE_URL}/admin/artists?page=${page}&limit=12&search=${encodeURIComponent(search)}`, {
+            headers: {
+                'Authorization': `Bearer ${authToken}`
+            }
+        });
+
+        const data = await response.json();
 
         const tbody = document.getElementById('artists-table-body');
-        tbody.innerHTML = artists.map(artist => `
+        tbody.innerHTML = data.artists.map(artist => `
             <tr>
+                <td><strong>#${artist.id}</strong></td>
                 <td>
                     <img src="${artist.image_url || '/images/placeholder-artist.jpg'}" 
                          alt="${artist.name}" class="table-img">
@@ -175,7 +197,10 @@ async function loadArtists() {
         `).join('');
 
         // Configurar autocompletado de artistas
-        setupArtistAutocomplete(artists);
+        setupArtistAutocomplete(data.artists);
+
+        // Renderizar paginación
+        renderPagination('artists', data.page, data.totalPages);
 
     } catch (error) {
         console.error('Error cargando artistas:', error);
@@ -364,13 +389,18 @@ async function deleteArtist(id) {
 }
 
 // ===== CANCIONES =====
-async function loadSongs() {
+async function loadSongs(page = 1, search = '') {
     try {
-        const response = await fetch(`${API_BASE_URL}/songs`);
-        const songs = await response.json();
+        const response = await fetch(`${API_BASE_URL}/admin/songs?page=${page}&limit=12&search=${encodeURIComponent(search)}`, {
+            headers: {
+                'Authorization': `Bearer ${authToken}`
+            }
+        });
+
+        const data = await response.json();
 
         const tbody = document.getElementById('songs-table-body');
-        tbody.innerHTML = songs.map(song => `
+        tbody.innerHTML = data.songs.map(song => `
             <tr>
                 <td>
                     <img src="${song.cover_image || '/images/placeholder-cover.jpg'}" 
@@ -391,6 +421,9 @@ async function loadSongs() {
             </tr>
         `).join('');
 
+        // Renderizar paginación
+        renderPagination('songs', data.page, data.totalPages);
+
     } catch (error) {
         console.error('Error cargando canciones:', error);
     }
@@ -402,12 +435,53 @@ function openSongModal(songId = null) {
     document.getElementById('song-modal-title').textContent = 'Nueva Canción';
     document.getElementById('upload-progress').style.display = 'none';
 
+    // Limpiar campo de artista
+    document.getElementById('song-artist-search').value = '';
+    document.getElementById('song-artist').value = '';
+
     if (songId) {
         document.getElementById('song-modal-title').textContent = 'Editar Canción';
-        // TODO: Cargar datos de la canción
+        loadSongData(songId);
     }
 
     songModal.classList.add('active');
+}
+
+async function loadSongData(songId) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/admin/songs?page=1&limit=1000&search=`, {
+            headers: {
+                'Authorization': `Bearer ${authToken}`
+            }
+        });
+        const data = await response.json();
+        const song = data.songs.find(s => s.id === songId);
+
+        if (song) {
+            document.getElementById('song-id').value = song.id;
+            document.getElementById('song-title').value = song.title || '';
+
+            // Configurar artista
+            if (song.artist_name) {
+                document.getElementById('song-artist-search').value = song.artist_name;
+                document.getElementById('song-artist').value = song.artist_id;
+            }
+
+            // Convertir duración de segundos a mm:ss
+            if (song.duration) {
+                const minutes = Math.floor(song.duration / 60);
+                const seconds = song.duration % 60;
+                document.getElementById('song-duration').value = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            }
+
+            document.getElementById('song-genre').value = song.genre || '';
+            document.getElementById('song-bpm').value = song.bpm || '';
+            document.getElementById('song-key').value = song.key_signature || '';
+        }
+    } catch (error) {
+        console.error('Error cargando datos de la canción:', error);
+        alert('Error al cargar los datos de la canción');
+    }
 }
 
 async function handleSongSubmit(e) {
@@ -527,18 +601,18 @@ async function deleteSong(id) {
 }
 
 // ===== ARCHIVOS SUBIDOS =====
-async function loadUploads() {
+async function loadUploads(page = 1, search = '') {
     try {
-        const response = await fetch(`${API_BASE_URL}/admin/uploads`, {
+        const response = await fetch(`${API_BASE_URL}/admin/uploads?page=${page}&limit=12&search=${encodeURIComponent(search)}`, {
             headers: {
                 'Authorization': `Bearer ${authToken}`
             }
         });
 
-        const uploads = await response.json();
+        const data = await response.json();
 
         const tbody = document.getElementById('uploads-table-body');
-        tbody.innerHTML = uploads.map(upload => `
+        tbody.innerHTML = data.uploads.map(upload => `
             <tr>
                 <td><strong>${upload.file_name}</strong></td>
                 <td>
@@ -553,22 +627,23 @@ async function loadUploads() {
             </tr>
         `).join('');
 
+        // Renderizar paginación
+        renderPagination('uploads', data.page, data.totalPages);
+
     } catch (error) {
         console.error('Error cargando uploads:', error);
     }
 }
 
-// Cargar uploads cuando se muestra la sección
-navLinks.forEach(link => {
-    if (link.dataset.section === 'uploads') {
-        link.addEventListener('click', loadUploads);
-    }
-});
 
 // ===== MODALES =====
 function closeModals() {
     artistModal.classList.remove('active');
     songModal.classList.remove('active');
+    const userModal = document.getElementById('user-modal');
+    if (userModal) {
+        userModal.classList.remove('active');
+    }
 }
 
 // ===== UTILIDADES =====
@@ -596,10 +671,365 @@ function formatDate(dateString) {
     }).format(date);
 }
 
+
 // Funciones globales para los botones
 window.editArtist = (id) => openArtistModal(id);
 window.deleteArtist = deleteArtist;
 window.editSong = (id) => openSongModal(id);
 window.deleteSong = deleteSong;
+
+// ===== GESTIÓN DE USUARIOS =====
+
+// ===== GESTIÓN DE USUARIOS =====
+
+const userModal = document.getElementById('user-modal');
+const userForm = document.getElementById('user-form');
+
+// Cargar usuarios con paginación
+async function loadUsers(page = 1, search = '') {
+    try {
+        const response = await fetch(`${API_BASE_URL}/admin/users?page=${page}&limit=12&search=${encodeURIComponent(search)}`, {
+            headers: {
+                'Authorization': `Bearer ${authToken}`
+            }
+        });
+
+        const data = await response.json();
+
+        const tbody = document.getElementById('users-table-body');
+        tbody.innerHTML = data.users.map(user => {
+            const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Sin nombre';
+            const avatarUrl = user.profile_image || '/images/user-avatar.jpg';
+
+            return `
+            <tr>
+                <td>
+                    <img src="${avatarUrl}" alt="${user.username}" class="table-img" style="border-radius: 50%;">
+                </td>
+                <td><strong>${fullName}</strong></td>
+                <td>${user.username}</td>
+                <td>${user.email}</td>
+                <td>${user.phone || '-'}</td>
+                <td>
+                    <span class="status-badge ${user.role === 'admin' ? 'status-active' : 'status-info'}">
+                        ${user.role === 'admin' ? 'Admin' : 'Usuario'}
+                    </span>
+                </td>
+                <td>
+                    <button class="btn-edit" onclick="editUser(${user.id})">Editar</button>
+                    <button class="btn-danger" onclick="deleteUser(${user.id})">Eliminar</button>
+                </td>
+            </tr>
+        `}).join('');
+
+        // Renderizar paginación
+        renderPagination('users', data.page, data.totalPages, (newPage) => {
+            currentUsersPage = newPage;
+            loadUsers(newPage, usersSearchQuery);
+        });
+
+    } catch (error) {
+        console.error('Error cargando usuarios:', error);
+    }
+}
+
+// Abrir modal de usuario
+function openUserModal(userId = null) {
+    userForm.reset();
+    document.getElementById('user-id').value = '';
+    document.getElementById('user-modal-title').textContent = 'Nuevo Usuario';
+    document.getElementById('user-password').required = true;
+
+    if (userId) {
+        document.getElementById('user-modal-title').textContent = 'Editar Usuario';
+        document.getElementById('user-password').required = false;
+        loadUserData(userId);
+    }
+
+    userModal.classList.add('active');
+}
+
+// Cargar datos del usuario
+async function loadUserData(userId) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/admin/users?search=&page=1&limit=1000`, {
+            headers: {
+                'Authorization': `Bearer ${authToken}`
+            }
+        });
+        const data = await response.json();
+        const user = data.users.find(u => u.id === userId);
+
+        if (user) {
+            document.getElementById('user-id').value = user.id;
+            document.getElementById('user-name').value = user.first_name || '';
+            document.getElementById('user-lastname').value = user.last_name || '';
+            document.getElementById('user-username').value = user.username;
+            document.getElementById('user-email').value = user.email;
+            document.getElementById('user-phone').value = user.phone || '';
+            document.getElementById('user-role').value = user.role;
+
+            // Mostrar avatar actual si existe
+            if (user.profile_image) {
+                document.getElementById('current-avatar-preview').style.display = 'block';
+                document.getElementById('current-avatar-img').src = user.profile_image;
+            } else {
+                document.getElementById('current-avatar-preview').style.display = 'none';
+            }
+        }
+    } catch (error) {
+        console.error('Error cargando datos del usuario:', error);
+        alert('Error al cargar los datos del usuario');
+    }
+}
+
+// Manejar envío del formulario de usuario
+async function handleUserSubmit(e) {
+    e.preventDefault();
+
+    const userId = document.getElementById('user-id').value;
+    const formData = new FormData();
+
+    // Agregar todos los campos
+    formData.append('first_name', document.getElementById('user-name').value);
+    formData.append('last_name', document.getElementById('user-lastname').value);
+    formData.append('username', document.getElementById('user-username').value);
+    formData.append('email', document.getElementById('user-email').value);
+    formData.append('phone', document.getElementById('user-phone').value);
+    formData.append('role', document.getElementById('user-role').value);
+
+    const password = document.getElementById('user-password').value;
+    if (password) {
+        formData.append('password', password);
+    }
+
+    // Agregar avatar si se seleccionó
+    const avatarFile = document.getElementById('user-avatar').files[0];
+    if (avatarFile) {
+        formData.append('avatar', avatarFile);
+    }
+
+    try {
+        const url = userId
+            ? `${API_BASE_URL}/admin/users/${userId}`
+            : `${API_BASE_URL}/admin/users`;
+
+        const method = userId ? 'PUT' : 'POST';
+
+        const response = await fetch(url, {
+            method: method,
+            headers: {
+                'Authorization': `Bearer ${authToken}`
+            },
+            body: formData
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Error al guardar usuario');
+        }
+
+        alert('Usuario guardado exitosamente');
+        closeModals();
+        await loadUsers(currentUsersPage, usersSearchQuery);
+        await loadDashboardStats();
+
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error al guardar usuario: ' + error.message);
+    }
+}
+
+// Eliminar usuario
+async function deleteUser(id) {
+    if (!confirm('¿Estás seguro de eliminar este usuario?')) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/admin/users/${id}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${authToken}`
+            }
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Error al eliminar usuario');
+        }
+
+        alert('Usuario eliminado exitosamente');
+        await loadUsers(currentUsersPage, usersSearchQuery);
+        await loadDashboardStats();
+
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error al eliminar usuario: ' + error.message);
+    }
+}
+
+// Función global para editar usuario
+window.editUser = (id) => openUserModal(id);
+window.deleteUser = deleteUser;
+
+// ===== FUNCIÓN GENÉRICA DE PAGINACIÓN =====
+
+function renderPagination(section, currentPage, totalPages, onPageChange) {
+    const container = document.getElementById(`${section}-pagination`);
+    if (!container) return;
+
+    if (totalPages <= 1) {
+        container.innerHTML = '';
+        return;
+    }
+
+    let html = '';
+
+    // Botón anterior
+    html += `<button class="pagination-btn" ${currentPage === 1 ? 'disabled' : ''} 
+             onclick="changePage('${section}', ${currentPage - 1})">
+             ← Anterior
+             </button>`;
+
+    // Páginas
+    const maxButtons = 5;
+    let startPage = Math.max(1, currentPage - Math.floor(maxButtons / 2));
+    let endPage = Math.min(totalPages, startPage + maxButtons - 1);
+
+    if (endPage - startPage < maxButtons - 1) {
+        startPage = Math.max(1, endPage - maxButtons + 1);
+    }
+
+    if (startPage > 1) {
+        html += `<button class="pagination-btn" onclick="changePage('${section}', 1)">1</button>`;
+        if (startPage > 2) {
+            html += `<span class="pagination-info">...</span>`;
+        }
+    }
+
+    for (let i = startPage; i <= endPage; i++) {
+        html += `<button class="pagination-btn ${i === currentPage ? 'active' : ''}" 
+                 onclick="changePage('${section}', ${i})">${i}</button>`;
+    }
+
+    if (endPage < totalPages) {
+        if (endPage < totalPages - 1) {
+            html += `<span class="pagination-info">...</span>`;
+        }
+        html += `<button class="pagination-btn" onclick="changePage('${section}', ${totalPages})">${totalPages}</button>`;
+    }
+
+    // Botón siguiente
+    html += `<button class="pagination-btn" ${currentPage === totalPages ? 'disabled' : ''} 
+             onclick="changePage('${section}', ${currentPage + 1})">
+             Siguiente →
+             </button>`;
+
+    // Info
+    html += `<span class="pagination-info">Página ${currentPage} de ${totalPages}</span>`;
+
+    container.innerHTML = html;
+}
+
+// Función global para cambiar de página
+window.changePage = function (section, page) {
+    if (section === 'users') {
+        currentUsersPage = page;
+        loadUsers(page, usersSearchQuery);
+    } else if (section === 'artists') {
+        currentArtistsPage = page;
+        loadArtists(page, artistsSearchQuery);
+    } else if (section === 'songs') {
+        currentSongsPage = page;
+        loadSongs(page, songsSearchQuery);
+    } else if (section === 'uploads') {
+        currentUploadsPage = page;
+        loadUploads(page, uploadsSearchQuery);
+    }
+};
+
+// Agregar event listeners para usuarios
+document.addEventListener('DOMContentLoaded', () => {
+    // Búsqueda de usuarios
+    const usersSearch = document.getElementById('users-search');
+    if (usersSearch) {
+        let searchTimeout;
+        usersSearch.addEventListener('input', (e) => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                usersSearchQuery = e.target.value;
+                currentUsersPage = 1;
+                loadUsers(1, usersSearchQuery);
+            }, 300);
+        });
+    }
+
+    // Búsqueda de artistas
+    const artistsSearch = document.getElementById('artists-search');
+    if (artistsSearch) {
+        let searchTimeout;
+        artistsSearch.addEventListener('input', (e) => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                artistsSearchQuery = e.target.value;
+                currentArtistsPage = 1;
+                loadArtists(1, artistsSearchQuery);
+            }, 300);
+        });
+    }
+
+    // Búsqueda de canciones
+    const songsSearch = document.getElementById('songs-search');
+    if (songsSearch) {
+        let searchTimeout;
+        songsSearch.addEventListener('input', (e) => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                songsSearchQuery = e.target.value;
+                currentSongsPage = 1;
+                loadSongs(1, songsSearchQuery);
+            }, 300);
+        });
+    }
+
+    // Búsqueda de uploads
+    const uploadsSearch = document.getElementById('uploads-search');
+    if (uploadsSearch) {
+        let searchTimeout;
+        uploadsSearch.addEventListener('input', (e) => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                uploadsSearchQuery = e.target.value;
+                currentUploadsPage = 1;
+                loadUploads(1, uploadsSearchQuery);
+            }, 300);
+        });
+    }
+
+    // Formulario de usuario
+    if (userForm) {
+        userForm.addEventListener('submit', handleUserSubmit);
+    }
+
+    // Botón de agregar usuario
+    const addUserBtn = document.getElementById('add-user-btn');
+    if (addUserBtn) {
+        addUserBtn.addEventListener('click', () => openUserModal());
+    }
+
+    // Cargar datos cuando se muestra cada sección
+    navLinks.forEach(link => {
+        if (link.dataset.section === 'users') {
+            link.addEventListener('click', () => loadUsers(1, ''));
+        } else if (link.dataset.section === 'artists') {
+            link.addEventListener('click', () => loadArtists(1, ''));
+        } else if (link.dataset.section === 'songs') {
+            link.addEventListener('click', () => loadSongs(1, ''));
+        } else if (link.dataset.section === 'uploads') {
+            link.addEventListener('click', () => loadUploads(1, ''));
+        }
+    });
+});
 
 console.log('🔧 Panel de administración inicializado');
