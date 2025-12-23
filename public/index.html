@@ -189,7 +189,7 @@
                 <section class="releases-section">
                     <div class="section-header">
                         <h2>Lanzamientos</h2>
-                        <a href="#" class="show-all">Mostrar todo</a>
+
                     </div>
                     <div class="releases-grid" id="releases-grid">
                         <!-- Lanzamientos se cargarán aquí -->
@@ -204,13 +204,6 @@
                 <div style="display: flex; align-items: center; gap: 8px;">
                     <h3 id="song-title-sidebar">Canción</h3>
                 </div>
-                <button class="close-btn">
-                    <svg viewBox="0 0 16 16" width="16" height="16">
-                        <path
-                            d="M2.47 2.47a.75.75 0 0 1 1.06 0L8 6.94l4.47-4.47a.75.75 0 1 1 1.06 1.06L9.06 8l4.47 4.47a.75.75 0 1 1-1.06 1.06L8 9.06l-4.47 4.47a.75.75 0 0 1-1.06-1.06L6.94 8 2.47 3.53a.75.75 0 0 1 0-1.06z"
-                            fill="currentColor" />
-                    </svg>
-                </button>
             </div>
 
             <!-- Portada de la canción -->
@@ -225,12 +218,20 @@
                         Selecciona una canción
                     </h4>
                     <p id="song-artist-detail"
-                        style="font-size: 14px; color: var(--text-subdued); margin-bottom: 12px;">
+                        style="font-size: 14px; color: var(--text-subdued); margin-bottom: 12px; cursor: pointer; transition: color 0.2s;"
+                        onmouseover="this.style.color='#1db954'" onmouseout="this.style.color='var(--text-subdued)'"
+                        onclick="goToCurrentArtist()">
                         Artista
                     </p>
-                    <p id="song-album-detail" style="font-size: 14px; color: var(--text-subdued);">
-                        Álbum
-                    </p>
+
+                    <!-- Título de Redes Sociales -->
+                    <h4
+                        style="font-size: 14px; font-weight: 700; margin-top: 24px; margin-bottom: 12px; color: var(--text-base);">
+                        Redes Sociales
+                    </h4>
+                    <div id="song-social-links" style="display: flex; flex-direction: column; gap: 8px;">
+                        <!-- Redes sociales se cargarán aquí -->
+                    </div>
                 </div>
             </div>
         </aside>

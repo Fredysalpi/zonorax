@@ -154,6 +154,25 @@ router.get('/artists', async (req, res) => {
     }
 });
 
+// Obtener artista por ID
+router.get('/artists/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        console.log('🔍 Obteniendo artista:', id);
+
+        const [artists] = await db.query('SELECT * FROM artists WHERE id = ?', [id]);
+
+        if (artists.length === 0) {
+            return res.status(404).json({ error: 'Artista no encontrado' });
+        }
+
+        res.json(artists[0]);
+    } catch (error) {
+        console.error('❌ Error en GET /artists/:id:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Crear DJ/Artista
 router.post('/artists', uploadArtist.fields([
     { name: 'image', maxCount: 1 },

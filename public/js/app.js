@@ -230,8 +230,13 @@ async function loadPlaylists() {
         const container = document.getElementById('playlists-container');
         container.innerHTML = playlists.map(playlist => `
             <div class="playlist-item" data-playlist-id="${playlist.id}">
-                <div class="playlist-cover" style="background: linear-gradient(135deg, ${getRandomGradient()}); width: 48px; height: 48px; min-width: 48px; min-height: 48px; border-radius: 4px; overflow: hidden;">
+                <div class="playlist-cover" style="background: linear-gradient(135deg, ${getRandomGradient()}); width: 48px; height: 48px; min-width: 48px; min-height: 48px; border-radius: 4px; overflow: hidden; display: flex; align-items: center; justify-content: center; position: relative;">
                     ${playlist.cover_image ? `<img src="${playlist.cover_image}" alt="${playlist.name}" style="width: 100%; height: 100%; object-fit: cover;">` : ''}
+                    ${playlist.name === 'Me Gusta' ? `
+                        <svg viewBox="0 0 16 16" width="24" height="24" style="position: absolute; fill: white; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));">
+                            <path d="M15.724 4.22A4.313 4.313 0 0 0 12.192.814a4.269 4.269 0 0 0-3.622 1.13.837.837 0 0 1-1.14 0 4.272 4.272 0 0 0-6.21 5.855l5.916 7.05a1.128 1.128 0 0 0 1.727 0l5.916-7.05a4.228 4.228 0 0 0 .945-3.577z"/>
+                        </svg>
+                    ` : ''}
                 </div>
                 <div class="playlist-info">
                     <div class="playlist-name">${playlist.name}</div>
@@ -584,13 +589,19 @@ async function loadPlaylistSongs(playlistId) {
                         align-items: center;
                         justify-content: center;
                         overflow: hidden;
+                        position: relative;
                     ">
                         ${playlist.cover_image ?
                 `<img src="${playlist.cover_image}" style="width: 100%; height: 100%; object-fit: cover;">` :
-                `<svg viewBox="0 0 24 24" width="80" height="80" fill="rgba(255,255,255,0.7)">
+                playlist.name === 'Me Gusta' ?
+                    `<svg viewBox="0 0 16 16" width="120" height="120" style="fill: white; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4));">
+                    <path d="M15.724 4.22A4.313 4.313 0 0 0 12.192.814a4.269 4.269 0 0 0-3.622 1.13.837.837 0 0 1-1.14 0 4.272 4.272 0 0 0-6.21 5.855l5.916 7.05a1.128 1.128 0 0 0 1.727 0l5.916-7.05a4.228 4.228 0 0 0 .945-3.577z"/>
+                </svg>` :
+                    `<svg viewBox="0 0 24 24" width="80" height="80" fill="rgba(255,255,255,0.7)">
                                 <path d="M3 22a1 1 0 0 1-1-1V3a1 1 0 0 1 2 0v18a1 1 0 0 1-1 1zM15.5 2.134A1 1 0 0 0 14 3v18a1 1 0 0 0 1.5.866l8-4.5a1 1 0 0 0 0-1.732l-8-4.5zM16 19.268V4.732L21.197 12 16 19.268zM7 2a1 1 0 0 0-1 1v18a1 1 0 1 0 2 0V3a1 1 0 0 0-1-1z" fill="currentColor"/>
                             </svg>`
             }
+
                     </div>
                     
                     <!-- Info de la Playlist -->
@@ -1146,16 +1157,151 @@ function updateSongSidebar(song) {
         songTitleDetail.textContent = song.title || 'Sin título';
     }
 
-    // Actualizar artista
+    // Actualizar artista (clickeable)
     const songArtistDetail = document.getElementById('song-artist-detail');
     if (songArtistDetail) {
         songArtistDetail.textContent = song.artist_name || 'Artista Desconocido';
     }
 
-    // Actualizar álbum
-    const songAlbumDetail = document.getElementById('song-album-detail');
-    if (songAlbumDetail) {
-        songAlbumDetail.textContent = song.album_name || 'Álbum Desconocido';
+    // Cargar redes sociales del artista
+    if (song.artist_id) {
+        loadArtistSocialLinks(song.artist_id);
+    } else {
+        // Limpiar redes sociales si no hay artista
+        const socialLinksContainer = document.getElementById('song-social-links');
+        if (socialLinksContainer) {
+            socialLinksContainer.innerHTML = '';
+        }
+    }
+}
+
+async function loadArtistSocialLinks(artistId) {
+    try {
+        console.log('🔍 Cargando redes sociales para artista ID:', artistId);
+
+        const token = localStorage.getItem('authToken');
+        const headers = {};
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+
+        const response = await fetch(`${API_BASE_URL}/admin/artists/${artistId}`, { headers });
+        const artist = await response.json();
+
+        console.log('📦 Datos del artista recibidos:', artist);
+
+        // Parsear social_links si es un string JSON
+        let socialLinks = {};
+        if (artist.social_links) {
+            try {
+                socialLinks = typeof artist.social_links === 'string'
+                    ? JSON.parse(artist.social_links)
+                    : artist.social_links;
+            } catch (e) {
+                console.error('Error parseando social_links:', e);
+            }
+        }
+
+        console.log('📘 Facebook:', socialLinks.facebook);
+        console.log('📷 Instagram:', socialLinks.instagram);
+        console.log('📱 WhatsApp:', socialLinks.whatsapp);
+
+        const socialLinksContainer = document.getElementById('song-social-links');
+        if (!socialLinksContainer) {
+            console.warn('⚠️ Contenedor song-social-links no encontrado');
+            return;
+        }
+
+        let socialHTML = '';
+
+        // Facebook
+        if (socialLinks.facebook) {
+            socialHTML += `
+                <a href="${socialLinks.facebook}" target="_blank" rel="noopener noreferrer" 
+                   style="
+                       display: flex;
+                       align-items: center;
+                       gap: 10px;
+                       padding: 10px 16px;
+                       background: rgba(24, 119, 242, 0.1);
+                       border: 1px solid rgba(24, 119, 242, 0.3);
+                       border-radius: 8px;
+                       color: #1877f2;
+                       text-decoration: none;
+                       font-size: 13px;
+                       font-weight: 600;
+                       transition: all 0.2s ease;
+                   "
+                   onmouseover="this.style.background='rgba(24, 119, 242, 0.2)'; this.style.borderColor='rgba(24, 119, 242, 0.5)';"
+                   onmouseout="this.style.background='rgba(24, 119, 242, 0.1)'; this.style.borderColor='rgba(24, 119, 242, 0.3)';">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+                        <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                    </svg>
+                    <span>Facebook</span>
+                </a>
+            `;
+        }
+
+        // Instagram
+        if (socialLinks.instagram) {
+            socialHTML += `
+                <a href="${socialLinks.instagram}" target="_blank" rel="noopener noreferrer"
+                   style="
+                       display: flex;
+                       align-items: center;
+                       gap: 10px;
+                       padding: 10px 16px;
+                       background: rgba(225, 48, 108, 0.1);
+                       border: 1px solid rgba(225, 48, 108, 0.3);
+                       border-radius: 8px;
+                       color: #e1306c;
+                       text-decoration: none;
+                       font-size: 13px;
+                       font-weight: 600;
+                       transition: all 0.2s ease;
+                   "
+                   onmouseover="this.style.background='rgba(225, 48, 108, 0.2)'; this.style.borderColor='rgba(225, 48, 108, 0.5)';"
+                   onmouseout="this.style.background='rgba(225, 48, 108, 0.1)'; this.style.borderColor='rgba(225, 48, 108, 0.3)';">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+                        <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+                    </svg>
+                    <span>Instagram</span>
+                </a>
+            `;
+        }
+
+        // WhatsApp
+        if (socialLinks.whatsapp) {
+            socialHTML += `
+                <a href="${socialLinks.whatsapp}" target="_blank" rel="noopener noreferrer"
+                   style="
+                       display: flex;
+                       align-items: center;
+                       gap: 10px;
+                       padding: 10px 16px;
+                       background: rgba(37, 211, 102, 0.1);
+                       border: 1px solid rgba(37, 211, 102, 0.3);
+                       border-radius: 8px;
+                       color: #25d366;
+                       text-decoration: none;
+                       font-size: 13px;
+                       font-weight: 600;
+                       transition: all 0.2s ease;
+                   "
+                   onmouseover="this.style.background='rgba(37, 211, 102, 0.2)'; this.style.borderColor='rgba(37, 211, 102, 0.5)';"
+                   onmouseout="this.style.background='rgba(37, 211, 102, 0.1)'; this.style.borderColor='rgba(37, 211, 102, 0.3)';">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+                    </svg>
+                    <span>Whatsapp</span>
+                </a>
+            `;
+        }
+
+        console.log('✅ HTML de redes sociales generado:', socialHTML ? 'Sí' : 'No (vacío)');
+        socialLinksContainer.innerHTML = socialHTML || '<p style="font-size: 12px; color: var(--text-subdued);">Sin redes sociales</p>';
+    } catch (error) {
+        console.error('Error cargando redes sociales del artista:', error);
     }
 }
 
@@ -1243,13 +1389,40 @@ function toggleRepeat() {
     const repeatBtn = document.querySelector('.repeat-btn');
     repeatBtn.classList.toggle('active', repeatMode !== 'off');
 
+    // Remover badge anterior si existe
+    const existingBadge = repeatBtn.querySelector('.repeat-badge');
+    if (existingBadge) {
+        existingBadge.remove();
+    }
+
     if (repeatMode === 'one') {
+        // Icono normal de repeat
         repeatBtn.innerHTML = `
             <svg viewBox="0 0 16 16" width="16" height="16">
                 <path d="M0 4.75A3.75 3.75 0 0 1 3.75 1h8.5A3.75 3.75 0 0 1 16 4.75v5a3.75 3.75 0 0 1-3.75 3.75H9.81l1.018 1.018a.75.75 0 1 1-1.06 1.06L6.939 12.75l2.829-2.828a.75.75 0 1 1 1.06 1.06L9.811 12h2.439a2.25 2.25 0 0 0 2.25-2.25v-5a2.25 2.25 0 0 0-2.25-2.25h-8.5a2.25 2.25 0 0 0-2.25 2.25v5A2.25 2.25 0 0 0 3.75 12H5v1.5H3.75A3.75 3.75 0 0 1 0 9.75v-5z" fill="currentColor"/>
-                <path d="M9.12 8V6.787L7.787 8.12 9.12 9.454V8.28h1.853V7.667H9.12V8z" fill="currentColor"/>
             </svg>
         `;
+        // Agregar badge "1" fuera del icono
+        const badge = document.createElement('span');
+        badge.className = 'repeat-badge';
+        badge.textContent = '1';
+        badge.style.cssText = `
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            background-color: #1db954;
+            color: #000;
+            font-size: 10px;
+            font-weight: 700;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+        `;
+        repeatBtn.appendChild(badge);
     } else {
         repeatBtn.innerHTML = `
             <svg viewBox="0 0 16 16" width="16" height="16">
@@ -1843,7 +2016,7 @@ function initializeEventListeners() {
 
 
     // ===== PERFIL Y LOGOUT =====
-    window.showProfile = function () {
+    window.showProfile = async function () {
         const token = localStorage.getItem('authToken');
         if (!token) {
             window.location.href = '/login.html';
@@ -1854,10 +2027,33 @@ function initializeEventListeners() {
             const payload = JSON.parse(atob(token.split('.')[1]));
 
             // Obtener datos del usuario desde localStorage
-            const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+            let currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+            const userId = currentUser.id || payload.userId || payload.id;
+
+            // Cargar datos completos del usuario desde la API
+            try {
+                const response = await fetch(`${API_BASE_URL}/users/${userId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.ok) {
+                    const userData = await response.json();
+                    // Actualizar currentUser con los datos de la API
+                    currentUser = {
+                        ...currentUser,
+                        ...userData
+                    };
+                    // Actualizar localStorage
+                    localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                }
+            } catch (error) {
+                console.error('Error cargando datos del usuario:', error);
+            }
+
             const username = currentUser.username || payload.username || 'Usuario';
             const email = currentUser.email || payload.email || '';
-            const userId = currentUser.id || payload.userId || payload.id;
 
             const contentWrapper = document.querySelector('.content-wrapper');
 
@@ -1872,8 +2068,23 @@ function initializeEventListeners() {
                     </div>
                     
                     <div style="margin-bottom: 24px;">
+                        <label style="display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px;">Nombre</label>
+                        <input type="text" id="profile-first-name" value="${currentUser.first_name || ''}" style="width: 100%; padding: 12px; background: var(--bg-base); border: 1px solid var(--border-subtle); border-radius: 4px; color: var(--text-base); font-size: 14px;">
+                    </div>
+                    
+                    <div style="margin-bottom: 24px;">
+                        <label style="display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px;">Apellido</label>
+                        <input type="text" id="profile-last-name" value="${currentUser.last_name || ''}" style="width: 100%; padding: 12px; background: var(--bg-base); border: 1px solid var(--border-subtle); border-radius: 4px; color: var(--text-base); font-size: 14px;">
+                    </div>
+                    
+                    <div style="margin-bottom: 24px;">
                         <label style="display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px;">Email</label>
                         <input type="email" id="profile-email" value="${email}" disabled style="width: 100%; padding: 12px; background: var(--bg-elevated); border: 1px solid var(--border-subtle); border-radius: 4px; color: var(--text-base); font-size: 14px; cursor: not-allowed;">
+                    </div>
+                    
+                    <div style="margin-bottom: 24px;">
+                        <label style="display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px;">Teléfono</label>
+                        <input type="tel" id="profile-phone" value="${currentUser.phone || ''}" placeholder="+1234567890" style="width: 100%; padding: 12px; background: var(--bg-base); border: 1px solid var(--border-subtle); border-radius: 4px; color: var(--text-base); font-size: 14px;">
                     </div>
                     
                     <div style="margin-bottom: 24px;">
@@ -1987,6 +2198,9 @@ function initializeEventListeners() {
     }
 
     window.updateProfile = async function () {
+        const firstName = document.getElementById('profile-first-name').value;
+        const lastName = document.getElementById('profile-last-name').value;
+        const phone = document.getElementById('profile-phone').value;
         const currentPassword = document.getElementById('profile-current-password').value;
         const newPassword = document.getElementById('profile-new-password').value;
         const confirmPassword = document.getElementById('profile-confirm-password').value;
@@ -2030,9 +2244,54 @@ function initializeEventListeners() {
             }
         }
 
+        // Guardar datos personales si han cambiado
+        const hasPersonalDataChanges = firstName || lastName || phone;
+        if (hasPersonalDataChanges) {
+            try {
+                const token = localStorage.getItem('authToken');
+                const userId = JSON.parse(localStorage.getItem('currentUser')).id;
+
+                const response = await fetch(`${API_BASE_URL}/users/${userId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        first_name: firstName,
+                        last_name: lastName,
+                        phone: phone
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Error al actualizar datos personales');
+                }
+
+                // Actualizar currentUser en localStorage
+                const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+                currentUser.first_name = firstName;
+                currentUser.last_name = lastName;
+                currentUser.phone = phone;
+                localStorage.setItem('currentUser', JSON.stringify(currentUser));
+
+                alert('✅ Datos personales actualizados correctamente');
+
+                // Si no hay cambios de contraseña, terminar aquí
+                if (!currentPassword && !newPassword && !confirmPassword) {
+                    return;
+                }
+            } catch (error) {
+                alert('❌ Error al actualizar datos: ' + error.message);
+                return;
+            }
+        }
+
         // Validar que se hayan llenado los campos de contraseña
         if (!currentPassword && !newPassword && !confirmPassword) {
-            alert('No hay cambios para guardar. Ingresa tu contraseña actual y nueva contraseña para cambiarla.');
+            alert('No hay cambios para guardar.');
             return;
         }
 

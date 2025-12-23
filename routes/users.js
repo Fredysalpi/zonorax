@@ -2,6 +2,23 @@ const express = require('express');
 const router = express.Router();
 const db = require('../config/database');
 
+// Obtener datos de un usuario por ID
+router.get('/:id', async (req, res) => {
+    try {
+        const userId = req.params.id;
+        const [users] = await db.query('SELECT id, username, email, first_name, last_name, phone, role, profile_image, created_at FROM users WHERE id = ?', [userId]);
+
+        if (users.length === 0) {
+            return res.status(404).json({ error: 'Usuario no encontrado' });
+        }
+
+        res.json(users[0]);
+    } catch (error) {
+        console.error('Error obteniendo usuario:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // Obtener playlists de usuario
 router.get('/:id/playlists', async (req, res) => {
     try {
@@ -75,6 +92,34 @@ router.put('/:id/password', async (req, res) => {
         res.json({ message: 'Contraseña actualizada correctamente' });
     } catch (error) {
         console.error('Error updating password:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Actualizar datos personales de usuario
+router.put('/:id', async (req, res) => {
+    try {
+        const { first_name, last_name, phone } = req.body;
+        const userId = req.params.id;
+
+        console.log('📝 Actualizando datos personales del usuario:', userId, { first_name, last_name, phone });
+
+        // Obtener usuario de la base de datos
+        const [users] = await db.query('SELECT * FROM users WHERE id = ?', [userId]);
+
+        if (users.length === 0) {
+            return res.status(404).json({ error: 'Usuario no encontrado' });
+        }
+
+        // Actualizar datos personales
+        await db.query(
+            'UPDATE users SET first_name = ?, last_name = ?, phone = ?, updated_at = NOW() WHERE id = ?',
+            [first_name || null, last_name || null, phone || null, userId]
+        );
+
+        res.json({ message: 'Datos personales actualizados correctamente' });
+    } catch (error) {
+        console.error('Error updating user data:', error);
         res.status(500).json({ error: error.message });
     }
 });
