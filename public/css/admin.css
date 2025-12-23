@@ -611,3 +611,60 @@ body {
     opacity: 0.5;
     pointer-events: none;
 }
+
+/* ===== ARTIST AUTOCOMPLETE ===== */
+.artist-suggestions {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    background-color: var(--bg-elevated);
+    border: 1px solid var(--border-subtle);
+    border-radius: 8px;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 100;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.artist-suggestion-item {
+    padding: 12px 16px;
+    cursor: pointer;
+    transition: background-color var(--transition-fast);
+    font-size: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.artist-suggestion-item:hover {
+    background-color: var(--bg-highlight);
+}
+
+.artist-suggestion-item .artist-name {
+    font-weight: 600;
+    color: var(--text-base);
+}
+
+.artist-suggestion-item .artist-id {
+    font-size: 12px;
+    color: var(--text-subdued);
+    margin-left: 8px;
+}
+
+.artist-suggestions::-webkit-scrollbar {
+    width: 8px;
+}
+
+.artist-suggestions::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.artist-suggestions::-webkit-scrollbar-thumb {
+    background-color: hsla(0, 0%, 100%, 0.3);
+    border-radius: 4px;
+}
+
+.form-group {
+    position: relative;
+}

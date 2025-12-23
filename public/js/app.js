@@ -12,7 +12,7 @@ function formatTime(seconds) {
     if (isNaN(seconds)) return '0:00';
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
-    return `:`;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
 
 function getRandomGradient() {
@@ -58,12 +58,6 @@ function goHome() {
             <h2 style="font-size: 24px; font-weight: 700; margin-bottom: 24px; color: var(--text-base);">DJs Destacados</h2>
             <div class="djs-grid" id="djs-grid">
                 <!-- DJs se cargarán aquí -->
-            </div>
-        </section>
-
-        <section class="featured-section">
-            <div class="featured-grid" id="featured-playlists">
-                <!-- Playlists destacadas se cargarán aquí -->
             </div>
         </section>
 
@@ -329,7 +323,7 @@ function showCreatePlaylistModal() {
             <div style="margin-bottom: 24px;">
                 <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
                     <input type="checkbox" id="playlist-public-checkbox" style="width: 16px; height: 16px; cursor: pointer;">
-                    <span style="font-size: 14px; color: var(--text-base);">Hacer pública</span>
+                    <span style="font-size: 14px; color: var(--text-base);">Hacer pública(Todos los usuarios podran ver tu Playlist)</span>
                 </label>
             </div>
             
@@ -701,7 +695,7 @@ async function loadPlaylistSongs(playlistId) {
                             <!-- Header de la tabla -->
                             <div style="
                                 display: grid;
-                                grid-template-columns: 40px 1fr 1fr 40px;
+                                grid-template-columns: 40px 1fr 1fr 40px 40px;
                                 gap: 16px;
                                 padding: 8px 16px;
                                 border-bottom: 1px solid var(--border-subtle);
@@ -720,13 +714,14 @@ async function loadPlaylistSongs(playlistId) {
                                         <path d="M8 3.25a.75.75 0 0 1 .75.75v3.25H12a.75.75 0 0 1 0 1.5H7.25V4A.75.75 0 0 1 8 3.25z" fill="currentColor"/>
                                     </svg>
                                 </div>
+                                <div></div>
                             </div>
                             
                             <!-- Canciones -->
                             ${currentPlaylist.map((song, index) => `
-                                <div class="song-row" onclick="playSong(${index})" style="
+                                <div class="song-row" style="
                                     display: grid;
-                                    grid-template-columns: 40px 1fr 1fr 40px;
+                                    grid-template-columns: 40px 1fr 1fr 40px 40px;
                                     gap: 16px;
                                     padding: 8px 16px;
                                     border-radius: 4px;
@@ -734,18 +729,38 @@ async function loadPlaylistSongs(playlistId) {
                                     align-items: center;
                                     transition: background-color 0.2s;
                                 " onmouseover="this.style.backgroundColor='rgba(255,255,255,0.1)'" onmouseout="this.style.backgroundColor='transparent'">
-                                    <div style="display: flex; align-items: center; justify-content: center;">
+                                    <div style="display: flex; align-items: center; justify-content: center;" onclick="playSong(${index})">
                                         <span style="color: var(--text-subdued); font-size: 16px;">${index + 1}</span>
                                     </div>
-                                    <div style="display: flex; align-items: center; gap: 12px;">
+                                    <div style="display: flex; align-items: center; gap: 12px;" onclick="playSong(${index})">
                                         ${song.cover_image ? `<img src="${song.cover_image}" alt="${song.title}" style="width: 40px; height: 40px; border-radius: 4px;">` : ''}
                                         <div>
                                             <div style="font-size: 16px; color: var(--text-base); margin-bottom: 4px;">${song.title}</div>
                                             <div style="font-size: 14px; color: var(--text-subdued);">${song.artist_name || 'Artista Desconocido'}</div>
                                         </div>
                                     </div>
-                                    <div style="color: var(--text-subdued); font-size: 14px;">${song.album_name || '-'}</div>
-                                    <div style="color: var(--text-subdued); font-size: 14px; text-align: center;">${formatTime(song.duration)}</div>
+                                    <div style="color: var(--text-subdued); font-size: 14px;" onclick="playSong(${index})">${song.album_name || '-'}</div>
+                                    <div style="color: var(--text-subdued); font-size: 14px; text-align: center;" onclick="playSong(${index})">${formatTime(song.duration)}</div>
+                                    <div style="display: flex; align-items: center; justify-content: center;">
+                                        <button class="song-remove-btn" onclick="event.stopPropagation(); removeSongFromPlaylist(${playlistId}, ${song.id}, '${song.title.replace(/'/g, "\\'")}');" title="Eliminar de la playlist" style="
+                                            width: 32px;
+                                            height: 32px;
+                                            border-radius: 50%;
+                                            border: none;
+                                            background: transparent;
+                                            color: var(--text-subdued);
+                                            cursor: pointer;
+                                            display: flex;
+                                            align-items: center;
+                                            justify-content: center;
+                                            transition: all 0.2s;
+                                            opacity: 0;
+                                        " onmouseover="this.style.background='var(--bg-tint)'; this.style.color='#ff4444'; this.style.opacity='1';" onmouseout="this.style.background='transparent'; this.style.color='var(--text-subdued)'; this.style.opacity='0';">
+                                            <svg viewBox="0 0 16 16" width="16" height="16">
+                                                <path d="M2.5 1a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1H3v9a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V4h.5a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H10a1 1 0 0 0-1-1H7a1 1 0 0 0-1 1H2.5zm3 4a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7a.5.5 0 0 1 .5-.5zM8 5a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-1 0v-7A.5.5 0 0 1 8 5zm3 .5v7a.5.5 0 0 1-1 0v-7a.5.5 0 0 1 1 0z" fill="currentColor"/>
+                                            </svg>
+                                        </button>
+                                    </div>
                                 </div>
                             `).join('')}
                         </div>
@@ -792,6 +807,15 @@ function initializePlayer() {
     });
 }
 
+function updateProgress() {
+    if (audioPlayer.duration) {
+        const percent = (audioPlayer.currentTime / audioPlayer.duration) * 100;
+        progressFill.style.width = `${percent}%`;
+        progressHandle.style.left = `${percent}%`;
+        timeCurrent.textContent = formatTime(audioPlayer.currentTime);
+    }
+}
+
 function playSong(index) {
     if (currentPlaylist.length === 0) return;
 
@@ -802,14 +826,305 @@ function playSong(index) {
     playerSongTitle.textContent = song.title;
     playerArtist.textContent = song.artist_name || 'Artista Desconocido';
 
+    // Guardar el artist_id de la canción actual para poder navegar a su página
+    window.currentArtistId = song.artist_id;
+    window.currentSongId = song.id;
+
     // Actualizar sidebar derecha con info de la canción
     updateSongSidebar(song);
+
+    // Verificar si la canción está en "Me Gusta"
+    updateLikeButtonState();
 
     audioPlayer.src = song.file_url;
     audioPlayer.play();
 
     fetch(`${API_BASE_URL}/songs/${song.id}/play`, { method: 'POST' });
 }
+
+// Función para ir a la página del artista actual
+window.goToCurrentArtist = function () {
+    if (window.currentArtistId) {
+        window.showArtistPage(window.currentArtistId);
+    } else {
+        console.warn('No hay artista seleccionado');
+    }
+}
+
+// Función para abrir el modal de agregar a playlist
+window.openAddToPlaylistModal = async function () {
+    if (!window.currentSongId) {
+        alert('No hay canción seleccionada');
+        return;
+    }
+
+    try {
+        const token = localStorage.getItem('authToken');
+        const userId = getCurrentUserId();
+
+        // Agregar user_id como query parameter para obtener playlists públicas y privadas del usuario
+        const url = userId ? `${API_BASE_URL}/playlists?user_id=${userId}` : `${API_BASE_URL}/playlists`;
+
+        const response = await fetch(url, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        const playlists = await response.json();
+
+        // Filtrar para excluir "Me Gusta"
+        const filteredPlaylists = playlists.filter(p => p.name !== 'Me Gusta');
+
+        const modal = document.getElementById('add-to-playlist-modal');
+        const playlistList = document.getElementById('playlist-selection-list');
+
+        if (filteredPlaylists.length === 0) {
+            playlistList.innerHTML = `
+                <p style="color: var(--text-subdued); text-align: center; padding: 20px;">
+                    No tienes playlists disponibles. Crea una nueva playlist primero.
+                </p>
+            `;
+        } else {
+            playlistList.innerHTML = filteredPlaylists.map(playlist => `
+                <button onclick="addSongToPlaylist(${playlist.id}, '${playlist.name.replace(/'/g, "\\'")}')" 
+                    style="padding: 12px 16px; background: var(--bg-highlight); border: 1px solid var(--border-subtle); 
+                           border-radius: 4px; color: var(--text-base); cursor: pointer; text-align: left; 
+                           transition: background 0.2s; font-size: 14px;"
+                    onmouseover="this.style.background='var(--bg-tint)'" 
+                    onmouseout="this.style.background='var(--bg-highlight)'">
+                    <div style="font-weight: 600;">${playlist.name}</div>
+                    <div style="font-size: 12px; color: var(--text-subdued); margin-top: 4px;">
+                        ${playlist.is_public ? '🌐 Pública' : '🔒 Privada'} • ${playlist.song_count || 0} canciones
+                    </div>
+                </button>
+            `).join('');
+        }
+
+        modal.style.display = 'flex';
+    } catch (error) {
+        console.error('Error loading playlists:', error);
+        alert('Error al cargar las playlists');
+    }
+}
+
+// Función para cerrar el modal
+window.closeAddToPlaylistModal = function () {
+    const modal = document.getElementById('add-to-playlist-modal');
+    modal.style.display = 'none';
+}
+
+// Función para agregar canción a una playlist
+window.addSongToPlaylist = async function (playlistId, playlistName) {
+    if (!window.currentSongId) {
+        alert('No hay canción seleccionada');
+        return;
+    }
+
+    try {
+        const token = localStorage.getItem('authToken');
+        const response = await fetch(`${API_BASE_URL}/playlists/${playlistId}/songs`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                song_id: window.currentSongId
+            })
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Error al agregar la canción');
+        }
+
+        alert(`✅ Canción agregada a "${playlistName}"`);
+
+        // Cerrar el modal automáticamente
+        closeAddToPlaylistModal();
+
+        // Recargar las playlists del sidebar para mostrar el número actualizado
+        await loadPlaylists();
+    } catch (error) {
+        console.error('Error adding song to playlist:', error);
+        alert('❌ ' + error.message);
+    }
+}
+
+// Función para eliminar canción de una playlist
+window.removeSongFromPlaylist = async function (playlistId, songId, songTitle) {
+    if (!confirm(`¿Estás seguro de que quieres eliminar "${songTitle}" de esta playlist?`)) {
+        return;
+    }
+
+    try {
+        const token = localStorage.getItem('authToken');
+        const response = await fetch(`${API_BASE_URL}/playlists/${playlistId}/songs/${songId}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Error al eliminar la canción');
+        }
+
+        alert(`✅ Canción eliminada de la playlist`);
+
+        // Recargar la playlist actual para reflejar los cambios
+        await loadPlaylistSongs(playlistId);
+
+        // También recargar las playlists del sidebar
+        await loadPlaylists();
+    } catch (error) {
+        console.error('Error removing song from playlist:', error);
+        alert('❌ ' + error.message);
+    }
+}
+
+// Función para agregar/quitar de "Me Gusta"
+window.toggleLikeSong = async function () {
+    if (!window.currentSongId) {
+        alert('No hay canción seleccionada');
+        return;
+    }
+
+    try {
+        const token = localStorage.getItem('authToken');
+        const userId = getCurrentUserId();
+
+        // Obtener la playlist "Me Gusta"
+        const url = userId ? `${API_BASE_URL}/playlists?user_id=${userId}` : `${API_BASE_URL}/playlists`;
+        const playlistsResponse = await fetch(url, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        const playlists = await playlistsResponse.json();
+        let likePlaylist = playlists.find(p => p.name === 'Me Gusta');
+
+        // Si no existe la playlist "Me Gusta", crearla automáticamente
+        if (!likePlaylist) {
+            const createResponse = await fetch(`${API_BASE_URL}/playlists`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    user_id: userId,
+                    name: 'Me Gusta',
+                    description: 'Canciones que me gustan',
+                    is_public: false
+                })
+            });
+
+            if (!createResponse.ok) {
+                throw new Error('Error al crear la playlist Me Gusta');
+            }
+
+            likePlaylist = await createResponse.json();
+
+            // Recargar playlists en el sidebar
+            await loadPlaylists();
+        }
+
+        // Verificar si la canción ya está en "Me Gusta"
+        const playlistDetailResponse = await fetch(`${API_BASE_URL}/playlists/${likePlaylist.id}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        const playlistDetail = await playlistDetailResponse.json();
+        const isLiked = playlistDetail.songs.some(s => s.id === window.currentSongId);
+
+        if (isLiked) {
+            // Quitar de "Me Gusta"
+            const deleteResponse = await fetch(`${API_BASE_URL}/playlists/${likePlaylist.id}/songs/${window.currentSongId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (!deleteResponse.ok) {
+                throw new Error('Error al quitar de Me Gusta');
+            }
+
+            alert('💔 Canción quitada de Me Gusta');
+        } else {
+            // Agregar a "Me Gusta"
+            const addResponse = await fetch(`${API_BASE_URL}/playlists/${likePlaylist.id}/songs`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    song_id: window.currentSongId
+                })
+            });
+
+            if (!addResponse.ok) {
+                const error = await addResponse.json();
+                throw new Error(error.error || 'Error al agregar a Me Gusta');
+            }
+
+            alert('❤️ Canción agregada a Me Gusta');
+        }
+
+        // Actualizar el estado del botón
+        updateLikeButtonState();
+    } catch (error) {
+        console.error('Error toggling like:', error);
+        alert('❌ ' + error.message);
+    }
+}
+
+// Función para actualizar el estado visual del botón de "Me Gusta"
+async function updateLikeButtonState() {
+    if (!window.currentSongId) return;
+
+    try {
+        const token = localStorage.getItem('authToken');
+        const userId = getCurrentUserId();
+
+        const url = userId ? `${API_BASE_URL}/playlists?user_id=${userId}` : `${API_BASE_URL}/playlists`;
+        const playlistsResponse = await fetch(url, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        const playlists = await playlistsResponse.json();
+        const likePlaylist = playlists.find(p => p.name === 'Me Gusta');
+
+        if (!likePlaylist) return;
+
+        const playlistDetailResponse = await fetch(`${API_BASE_URL}/playlists/${likePlaylist.id}`, {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        const playlistDetail = await playlistDetailResponse.json();
+        const isLiked = playlistDetail.songs.some(s => s.id === window.currentSongId);
+
+        const likeBtn = document.getElementById('like-song-btn');
+        if (likeBtn) {
+            if (isLiked) {
+                likeBtn.classList.add('active');
+                likeBtn.style.color = '#1db954';
+            } else {
+                likeBtn.classList.remove('active');
+                likeBtn.style.color = '';
+            }
+        }
+    } catch (error) {
+        console.error('Error updating like button state:', error);
+    }
+}
+
 
 // Función para actualizar el sidebar con info de la canción
 function updateSongSidebar(song) {
@@ -1023,7 +1338,30 @@ function initializeEventListeners() {
         }
     });
 
-    // Botón like eliminado
+    // Event listener para el botón de "Me Gusta"
+    const likeSongBtn = document.getElementById('like-song-btn');
+    if (likeSongBtn) {
+        likeSongBtn.addEventListener('click', toggleLikeSong);
+    }
+
+    // Event listener para el botón de "Agregar a playlist"
+    const addToPlaylistBtn = document.getElementById('add-to-playlist-btn');
+    if (addToPlaylistBtn) {
+        addToPlaylistBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            openAddToPlaylistModal();
+        });
+    }
+
+    // Cerrar modal al hacer clic fuera de él
+    const addToPlaylistModal = document.getElementById('add-to-playlist-modal');
+    if (addToPlaylistModal) {
+        addToPlaylistModal.addEventListener('click', (e) => {
+            if (e.target === addToPlaylistModal) {
+                closeAddToPlaylistModal();
+            }
+        });
+    }
 
     const mainSearch = document.getElementById('main-search');
     if (mainSearch) {

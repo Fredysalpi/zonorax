@@ -164,7 +164,7 @@ window.editPlaylist = async function (playlistId) {
                 <div style="margin-bottom: 24px;">
                     <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
                         <input type="checkbox" id="edit-playlist-public" ${playlist.is_public ? 'checked' : ''} style="width: 16px; height: 16px; cursor: pointer;">
-                        <span style="font-size: 14px; color: var(--text-base);">Hacer pública</span>
+                        <span style="font-size: 14px; color: var(--text-base);">Hacer pública (Todos los usuarios podran ver tu Playlist)</span>
                     </label>
                 </div>
                 

@@ -174,14 +174,68 @@ async function loadArtists() {
             </tr>
         `).join('');
 
-        // Cargar artistas en el select del formulario de canciones
-        const artistSelect = document.getElementById('song-artist');
-        artistSelect.innerHTML = '<option value="">Seleccionar artista...</option>' +
-            artists.map(a => `<option value="${a.id}">${a.name}</option>`).join('');
+        // Configurar autocompletado de artistas
+        setupArtistAutocomplete(artists);
 
     } catch (error) {
         console.error('Error cargando artistas:', error);
     }
+}
+
+// Configurar autocompletado de artistas
+function setupArtistAutocomplete(artists) {
+    const searchInput = document.getElementById('song-artist-search');
+    const hiddenInput = document.getElementById('song-artist');
+    const suggestionsDiv = document.getElementById('artist-suggestions');
+
+    if (!searchInput) return;
+
+    searchInput.addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase().trim();
+
+        if (query.length === 0) {
+            suggestionsDiv.style.display = 'none';
+            hiddenInput.value = '';
+            return;
+        }
+
+        const filtered = artists.filter(artist =>
+            artist.name.toLowerCase().includes(query)
+        );
+
+        if (filtered.length === 0) {
+            suggestionsDiv.innerHTML = '<div style="padding: 12px; color: var(--text-subdued);">No se encontraron artistas</div>';
+            suggestionsDiv.style.display = 'block';
+            return;
+        }
+
+        suggestionsDiv.innerHTML = filtered.map(artist => `
+            <div class="artist-suggestion-item" data-id="${artist.id}" data-name="${artist.name}">
+                <span class="artist-name">${artist.name}</span>
+                <span class="artist-id">(${artist.id})</span>
+            </div>
+        `).join('');
+
+        suggestionsDiv.style.display = 'block';
+
+        // Agregar event listeners a las sugerencias
+        suggestionsDiv.querySelectorAll('.artist-suggestion-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const artistId = item.dataset.id;
+                const artistName = item.dataset.name;
+                searchInput.value = artistName;
+                hiddenInput.value = artistId;
+                suggestionsDiv.style.display = 'none';
+            });
+        });
+    });
+
+    // Cerrar sugerencias al hacer clic fuera
+    document.addEventListener('click', (e) => {
+        if (!searchInput.contains(e.target) && !suggestionsDiv.contains(e.target)) {
+            suggestionsDiv.style.display = 'none';
+        }
+    });
 }
 
 function openArtistModal(artistId = null) {
@@ -368,6 +422,18 @@ async function handleSongSubmit(e) {
         return;
     }
 
+    // Convertir duración de mm:ss a segundos
+    const durationInput = document.getElementById('song-duration').value;
+    const durationInSeconds = convertDurationToSeconds(durationInput);
+
+    if (durationInSeconds === null) {
+        alert('Por favor ingresa una duración válida en formato mm:ss (ejemplo: 2:54)');
+        return;
+    }
+
+    // Reemplazar el valor de duración con los segundos
+    formData.set('duration', durationInSeconds);
+
     try {
         const url = songId
             ? `${API_BASE_URL}/admin/songs/${songId}`
@@ -414,6 +480,23 @@ async function handleSongSubmit(e) {
         console.error('Error:', error);
         alert('Error al guardar canción: ' + error.message);
     }
+}
+
+// Función para convertir duración de mm:ss a segundos
+function convertDurationToSeconds(duration) {
+    if (!duration) return null;
+
+    const parts = duration.split(':');
+    if (parts.length !== 2) return null;
+
+    const minutes = parseInt(parts[0], 10);
+    const seconds = parseInt(parts[1], 10);
+
+    if (isNaN(minutes) || isNaN(seconds) || seconds >= 60 || seconds < 0) {
+        return null;
+    }
+
+    return (minutes * 60) + seconds;
 }
 
 async function deleteSong(id) {

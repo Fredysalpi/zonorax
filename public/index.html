@@ -186,12 +186,6 @@
                     </div>
                 </section>
 
-                <section class="featured-section">
-                    <div class="featured-grid" id="featured-playlists">
-                        <!-- Playlists destacadas se cargarán aquí -->
-                    </div>
-                </section>
-
                 <section class="releases-section">
                     <div class="section-header">
                         <h2>Lanzamientos</h2>
@@ -248,10 +242,21 @@
                 <div class="song-info">
                     <img src="/images/placeholder-cover.jpg" alt="Cover" id="player-cover">
                     <div class="song-details">
-                        <div class="song-title" id="player-song-title">TODO KE VER</div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <div class="song-title" id="player-song-title">Elegir Cancion</div>
+                            <button class="control-btn" id="add-to-playlist-btn" title="Agregar a playlist"
+                                style="opacity: 0.7; padding: 4px;">
+                                <svg viewBox="0 0 16 16" width="16" height="16">
+                                    <path
+                                        d="M15.25 8a.75.75 0 0 1-.75.75H8.75v5.75a.75.75 0 0 1-1.5 0V8.75H1.5a.75.75 0 0 1 0-1.5h5.75V1.5a.75.75 0 0 1 1.5 0v5.75h5.75a.75.75 0 0 1 .75.75z"
+                                        fill="currentColor" />
+                                </svg>
+                            </button>
+                        </div>
                         <div class="song-artist" style="display: flex; align-items: center; gap: 4px;">
-                            <span id="player-artist" style="cursor: pointer;" onclick="goToCurrentArtist()">Vídeo
-                                musical • Jere Klein, Katteyes, Mateo on ti</span>
+                            <span id="player-artist" style="cursor: pointer; transition: color 0.2s;"
+                                onclick="goToCurrentArtist()" onmouseover="this.style.color='#1db954'"
+                                onmouseout="this.style.color=''">Artista</span>
                             <img src="/images/verificado.png" alt="Verificado" id="player-verified-badge"
                                 style="width: 14px; height: 14px; display: none;" title="Artista Verificado">
                         </div>
@@ -262,6 +267,13 @@
 
             <div class="player-center">
                 <div class="player-controls">
+                    <button class="control-btn like-btn" id="like-song-btn" title="Me gusta">
+                        <svg viewBox="0 0 16 16" width="16" height="16">
+                            <path
+                                d="M15.724 4.22A4.313 4.313 0 0 0 12.192.814a4.269 4.269 0 0 0-3.622 1.13.837.837 0 0 1-1.14 0 4.272 4.272 0 0 0-6.21 5.855l5.916 7.05a1.128 1.128 0 0 0 1.727 0l5.916-7.05a4.228 4.228 0 0 0 .945-3.577z"
+                                fill="currentColor" />
+                        </svg>
+                    </button>
                     <button class="control-btn shuffle-btn" title="Activar orden aleatorio">
                         <svg viewBox="0 0 16 16" width="16" height="16">
                             <path
@@ -302,14 +314,14 @@
                     </button>
                 </div>
                 <div class="progress-bar-container">
-                    <span class="time-current" id="time-current">2:05</span>
+                    <span class="time-current" id="time-current">0:00</span>
                     <div class="progress-bar">
                         <div class="progress-bar-bg">
-                            <div class="progress-bar-fill" id="progress-fill" style="width: 50%;"></div>
-                            <div class="progress-handle" id="progress-handle" style="left: 50%;"></div>
+                            <div class="progress-bar-fill" id="progress-fill" style="width: 0%;"></div>
+                            <div class="progress-handle" id="progress-handle" style="left: 0%;"></div>
                         </div>
                     </div>
-                    <span class="time-total" id="time-total">2:38</span>
+                    <span class="time-total" id="time-total">0:00</span>
                 </div>
             </div>
 
@@ -333,7 +345,23 @@
         </div>
     </div>
 
-
+    <!-- Modal para agregar a playlist -->
+    <div id="add-to-playlist-modal"
+        style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 10000; align-items: center; justify-content: center;">
+        <div
+            style="background: var(--bg-elevated); border-radius: 8px; padding: 24px; max-width: 400px; width: 90%; max-height: 80vh; overflow-y: auto;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="font-size: 24px; font-weight: 700; margin: 0;">Agregar a playlist</h2>
+                <button onclick="closeAddToPlaylistModal()"
+                    style="background: none; border: none; color: var(--text-subdued); cursor: pointer; font-size: 24px; padding: 0; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">
+                    ×
+                </button>
+            </div>
+            <div id="playlist-selection-list" style="display: flex; flex-direction: column; gap: 8px;">
+                <!-- Las playlists se cargarán aquí dinámicamente -->
+            </div>
+        </div>
+    </div>
 
     </div>
     </div>

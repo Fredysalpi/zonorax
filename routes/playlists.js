@@ -133,6 +133,21 @@ router.post('/:id/songs', async (req, res) => {
     }
 });
 
+// Eliminar canción de playlist
+router.delete('/:playlistId/songs/:songId', async (req, res) => {
+    try {
+        const { playlistId, songId } = req.params;
+
+        await db.query(
+            'DELETE FROM playlist_songs WHERE playlist_id = ? AND song_id = ?',
+            [playlistId, songId]
+        );
+
+        res.json({ success: true, message: 'Canción eliminada de la playlist' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
 // Actualizar playlist
 router.put('/:id', authenticate, async (req, res) => {
     try {
