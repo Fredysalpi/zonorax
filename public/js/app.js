@@ -811,10 +811,16 @@ function initializePlayer() {
     audioPlayer.addEventListener('play', () => {
         isPlaying = true;
         updatePlayButton();
+        if (typeof updateMobilePlayButton === 'function') {
+            updateMobilePlayButton(true);
+        }
     });
     audioPlayer.addEventListener('pause', () => {
         isPlaying = false;
         updatePlayButton();
+        if (typeof updateMobilePlayButton === 'function') {
+            updateMobilePlayButton(false);
+        }
     });
 }
 
@@ -846,6 +852,12 @@ function playSong(index) {
 
     // Verificar si la canción está en "Me Gusta"
     updateLikeButtonState();
+
+    // Actualizar mobile player si existe
+    if (typeof updateMobilePlayerInfo === 'function') {
+        updateMobilePlayerInfo(song);
+    }
+
 
     audioPlayer.src = song.file_url;
     audioPlayer.play();

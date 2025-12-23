@@ -18,6 +18,23 @@ router.get('/', async (req, res) => {
     }
 });
 
+// Buscar artistas por nombre
+router.get('/search/:query', async (req, res) => {
+    try {
+        const query = `%${req.params.query}%`;
+        const [artists] = await db.query(
+            'SELECT * FROM artists WHERE LOWER(name) LIKE LOWER(?) ORDER BY name LIMIT 10',
+            [query]
+        );
+        console.log(`🔍 Searching artists with query: "${req.params.query}", found: ${artists.length}`);
+        res.json(artists);
+    } catch (error) {
+        console.error('Error searching artists:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+
 // Obtener artista por ID con sus canciones
 router.get('/:id', async (req, res) => {
     try {
