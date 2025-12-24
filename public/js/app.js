@@ -839,6 +839,15 @@ function playSong(index) {
     currentSongIndex = index;
     const song = currentPlaylist[currentSongIndex];
 
+    // Log de depuración
+    console.log('🎵 playSong ejecutándose:');
+    console.log('   - Índice recibido:', index);
+    console.log('   - currentSongIndex:', currentSongIndex);
+    console.log('   - Canción obtenida:', song);
+    console.log('   - ID de canción:', song.id);
+    console.log('   - Título:', song.title);
+    console.log('   - Artista ID:', song.artist_id);
+
     playerCover.src = song.cover_image || '/images/placeholder-cover.jpg';
     playerSongTitle.textContent = song.title;
     playerArtist.textContent = song.artist_name || 'Artista Desconocido';

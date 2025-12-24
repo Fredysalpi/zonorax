@@ -678,4 +678,418 @@
         handleMobileSearch();
     }
 
+    // ============================================
+    // MOBILE LIBRARY FUNCTIONALITY
+    // ============================================
+
+    // Generar degradado aleatorio para playlists sin imagen
+    function getRandomGradient() {
+        const gradients = [
+            '#667eea 0%, #764ba2 100%',
+            '#f093fb 0%, #f5576c 100%',
+            '#4facfe 0%, #00f2fe 100%',
+            '#43e97b 0%, #38f9d7 100%',
+            '#fa709a 0%, #fee140 100%',
+            '#30cfd0 0%, #330867 100%',
+            '#a8edea 0%, #fed6e3 100%',
+            '#ff9a9e 0%, #fecfef 100%',
+            '#ffecd2 0%, #fcb69f 100%',
+            '#ff6e7f 0%, #bfe9ff 100%'
+        ];
+        return gradients[Math.floor(Math.random() * gradients.length)];
+    }
+
+    // Mostrar biblioteca con playlists
+    window.showMobileLibrary = async function () {
+        if (!isMobileDevice()) return;
+
+        const contentWrapper = document.querySelector('.content-wrapper');
+        if (!contentWrapper) return;
+
+        const API_BASE_URL = window.location.hostname === 'localhost'
+            ? 'http://localhost:3000/api'
+            : '/api';
+
+        try {
+            const token = localStorage.getItem('authToken');
+            const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+
+            if (!token || !currentUser.id) {
+                contentWrapper.innerHTML = '<div style="padding: 40px; text-align: center; color: #b3b3b3;">Inicia sesión para ver tu biblioteca</div>';
+                return;
+            }
+
+            // Obtener playlists del usuario
+            const response = await fetch(`${API_BASE_URL}/playlists?user_id=${currentUser.id}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('Error al cargar playlists');
+            }
+
+            const playlists = await response.json();
+
+            // Renderizar biblioteca
+            contentWrapper.innerHTML = `
+                <div style="padding: 20px 20px 150px 12px;">
+                    <h1 style="font-size: 32px; font-weight: 900; margin-bottom: 24px; padding-left: 4px;">Tu biblioteca</h1>
+                    
+                    <div id="playlists-container" style="display: flex; flex-direction: column; gap: 12px;">
+                        ${playlists.length === 0 ?
+                    '<div style="text-align: center; padding: 40px; color: #b3b3b3;">No tienes playlists aún</div>' :
+                    playlists.map(playlist => {
+                        const gradient = getRandomGradient();
+                        return `
+                                <div class="playlist-item" data-playlist-id="${playlist.id}" style="
+                                    display: flex;
+                                    align-items: center;
+                                    gap: 12px;
+                                    padding: 8px 0;
+                                    cursor: pointer;
+                                    transition: opacity 0.2s;
+                                " onclick="showMobilePlaylist(${playlist.id})">
+                                    ${playlist.cover_image ?
+                                `<img src="${playlist.cover_image}"
+                                             alt="${playlist.name}"
+                                             style="width: 56px; height: 56px; border-radius: 4px; object-fit: cover; flex-shrink: 0;">` :
+                                `<div style="
+                                            width: 56px;
+                                            height: 56px;
+                                            border-radius: 4px;
+                                            background: linear-gradient(135deg, ${gradient});
+                                            display: flex;
+                                            align-items: center;
+                                            justify-content: center;
+                                            flex-shrink: 0;
+                                        ">
+                                            <svg width="28" height="28" viewBox="0 0 24 24" fill="white" opacity="0.7">
+                                                <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+                                            </svg>
+                                        </div>`
+                            }
+                                    <div style="flex: 1; min-width: 0;">
+                                        <div style="font-size: 16px; font-weight: 400; color: #ffffff; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                            ${playlist.name}
+                                        </div>
+                                        <div style="font-size: 14px; color: #b3b3b3; display: flex; align-items: center; gap: 4px;">
+                                            <span style="color: #1DB954; font-size: 12px;">📌</span>
+                                            Playlist • ${playlist.song_count || 0} canciones
+                                        </div>
+                                    </div>
+                                </div>
+                            `}).join('')
+                }
+                    </div>
+                </div>
+            `;
+
+        } catch (error) {
+            console.error('Error loading library:', error);
+            contentWrapper.innerHTML = '<div style="padding: 40px; text-align: center; color: #ff4444;">Error al cargar la biblioteca</div>';
+        }
+    };
+
+    // Mostrar canciones de una playlist
+    window.showMobilePlaylist = async function (playlistId) {
+        if (!isMobileDevice()) return;
+
+        const contentWrapper = document.querySelector('.content-wrapper');
+        if (!contentWrapper) return;
+
+        const API_BASE_URL = window.location.hostname === 'localhost'
+            ? 'http://localhost:3000/api'
+            : '/api';
+
+        try {
+            const token = localStorage.getItem('authToken');
+
+            // Obtener detalles de la playlist
+            const response = await fetch(`${API_BASE_URL}/playlists/${playlistId}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('Error al cargar playlist');
+            }
+
+            const playlist = await response.json();
+            const gradient = getRandomGradient();
+            const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+
+            // Calcular duración total
+            const totalDuration = playlist.songs?.reduce((acc, song) => acc + (song.duration || 0), 0) || 0;
+            const hours = Math.floor(totalDuration / 3600);
+            const minutes = Math.floor((totalDuration % 3600) / 60);
+            const durationText = hours > 0 ? `${hours}h ${minutes}min` : `${minutes}min`;
+
+            // Aplicar degradado al content-wrapper
+            contentWrapper.style.background = `linear-gradient(180deg, rgba(${gradient.match(/\d+/g)?.slice(0, 3).join(',') || '102,126,234'}, 0.3) 0%, transparent 300px)`;
+
+            // Renderizar playlist estilo Spotify
+            contentWrapper.innerHTML = `
+                <div style="padding-bottom: 150px;">
+                    <!-- Header con flecha de volver -->
+                    <div style="padding: 16px;">
+                        <button onclick="showMobileLibrary()" style="
+                            background: rgba(0,0,0,0.5);
+                            border: none;
+                            color: #ffffff;
+                            width: 32px;
+                            height: 32px;
+                            border-radius: 50%;
+                            cursor: pointer;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                        ">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M15 18l-6-6 6-6"/>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <!-- Portada y detalles -->
+                    <div style="text-align: center; padding: 0 20px 20px;">
+                        ${playlist.cover_image ?
+                    `<img src="${playlist.cover_image}" 
+                                 alt="${playlist.name}"
+                                 style="width: 240px; height: 240px; border-radius: 8px; object-fit: cover; margin-bottom: 20px; box-shadow: 0 8px 24px rgba(0,0,0,0.5);">` :
+                    `<div style="
+                                width: 240px; 
+                                height: 240px; 
+                                border-radius: 8px; 
+                                background: linear-gradient(135deg, ${gradient});
+                                margin: 0 auto 20px;
+                                box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                            ">
+                                <svg width="96" height="96" viewBox="0 0 24 24" fill="white" opacity="0.7">
+                                    <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
+                                </svg>
+                            </div>`
+                }
+                        
+                        <h1 style="font-size: 24px; font-weight: 700; margin-bottom: 8px; text-align: left;">${playlist.name}</h1>
+                        <p style="font-size: 13px; color: #b3b3b3; text-align: left; margin-bottom: 12px;">
+                            ${playlist.description || 'Playlist'}
+                        </p>
+                        
+                        <!-- Creador -->
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                            <div style="width: 24px; height: 24px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600;">
+                                ${playlist.username?.charAt(0).toUpperCase() || 'U'}
+                            </div>
+                            <span style="font-size: 13px; font-weight: 600;">${playlist.username || 'Usuario'}</span>
+                        </div>
+                        
+                        <!-- Info -->
+                        <div style="display: flex; align-items: center; gap: 4px; font-size: 13px; color: #b3b3b3;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
+                            </svg>
+                            <span>Se guardó ${playlist.songs?.length || 0} veces • ${durationText}</span>
+                        </div>
+                    </div>
+
+                    <!-- Botones de acción -->
+                    <div style="padding: 0 20px 20px; display: flex; align-items: center; justify-content: flex-end; gap: 16px;">
+                        <!-- Botón shuffle -->
+                        <button onclick="shuffleAndPlayPlaylist(${playlistId})" style="background: none; border: none; color: #b3b3b3; cursor: pointer; padding: 8px;">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/>
+                            </svg>
+                        </button>
+                        
+                        <!-- Botón play grande -->
+                        <button onclick="playPlaylistFromStart(${playlistId})" style="
+                            background: #1DB954;
+                            border: none;
+                            width: 56px;
+                            height: 56px;
+                            border-radius: 50%;
+                            cursor: pointer;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+                        ">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="#000000">
+                                <path d="M8 5v14l11-7z"/>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <!-- Lista de canciones -->
+                    <div style="padding: 0 12px;">
+                        ${!playlist.songs || playlist.songs.length === 0 ?
+                    '<div style="text-align: center; padding: 40px; color: #b3b3b3;">Esta playlist está vacía</div>' :
+                    playlist.songs.map((song, index) => `
+                                <div style="
+                                    display: flex;
+                                    align-items: center;
+                                    gap: 12px;
+                                    padding: 8px 0;
+                                    position: relative;
+                                ">
+                                    <div onclick="playPlaylistSongByIndex(${playlistId}, ${index})" style="
+                                        display: flex;
+                                        align-items: center;
+                                        gap: 12px;
+                                        flex: 1;
+                                        cursor: pointer;
+                                    ">
+                                        <img src="${song.cover_image || '/images/placeholder-cover.jpg'}" 
+                                             alt="${song.title}"
+                                             style="width: 48px; height: 48px; border-radius: 4px; object-fit: cover; flex-shrink: 0;">
+                                        <div style="flex: 1; min-width: 0;">
+                                            <div style="font-size: 14px; font-weight: 400; color: #ffffff; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                                ${song.title}
+                                            </div>
+                                            <div style="font-size: 12px; color: #b3b3b3; display: flex; align-items: center; gap: 4px;">
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
+                                                </svg>
+                                                <span>${song.artist_name || 'Artista Desconocido'}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <button onclick="removeSongFromPlaylist(${playlistId}, ${song.id})" style="background: none; border: none; color: #b3b3b3; cursor: pointer; padding: 8px;" title="Eliminar de la lista">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                            <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            `).join('')
+                }
+                    </div>
+                </div>
+            `;
+
+        } catch (error) {
+            console.error('Error loading playlist:', error);
+            contentWrapper.innerHTML = '<div style="padding: 40px; text-align: center; color: #ff4444;">Error al cargar la playlist</div>';
+        }
+    };
+
+    // Reproducir canción de playlist por índice
+    window.playPlaylistSongByIndex = async function (playlistId, songIndex) {
+        const API_BASE_URL = window.location.hostname === 'localhost'
+            ? 'http://localhost:3000/api'
+            : '/api';
+
+        try {
+            const token = localStorage.getItem('authToken');
+            const response = await fetch(`${API_BASE_URL}/playlists/${playlistId}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (response.ok) {
+                const playlist = await response.json();
+
+                if (playlist.songs && playlist.songs[songIndex]) {
+                    // Limpiar estado previo
+                    if (window.audioPlayer) {
+                        window.audioPlayer.pause();
+                        window.audioPlayer.currentTime = 0;
+                    }
+
+                    // Cargar playlist completa en el reproductor global
+                    window.currentPlaylist = playlist.songs;
+                    window.currentSongIndex = songIndex;
+
+                    // Log de verificación
+                    console.log('🔍 Verificación antes de reproducir:');
+                    console.log('   - Índice a reproducir:', songIndex);
+                    console.log('   - Canción en currentPlaylist[' + songIndex + ']:', window.currentPlaylist[songIndex]);
+                    console.log('   - ID de canción:', window.currentPlaylist[songIndex].id);
+                    console.log('   - Título:', window.currentPlaylist[songIndex].title);
+                    console.log('   - Artista ID:', window.currentPlaylist[songIndex].artist_id);
+
+                    // Pequeño delay para asegurar que el estado se actualice
+                    setTimeout(() => {
+                        if (typeof window.playSong === 'function') {
+                            window.playSong(songIndex);
+                        }
+                    }, 0);
+                }
+            }
+        } catch (error) {
+            console.error('Error playing song:', error);
+        }
+    };
+
+    // Reproducir playlist desde el inicio
+    window.playPlaylistFromStart = async function (playlistId) {
+        await window.playPlaylistSongByIndex(playlistId, 0);
+    };
+
+    // Reproducir playlist en modo aleatorio
+    window.shuffleAndPlayPlaylist = async function (playlistId) {
+        const API_BASE_URL = window.location.hostname === 'localhost'
+            ? 'http://localhost:3000/api'
+            : '/api';
+
+        try {
+            const token = localStorage.getItem('authToken');
+            const response = await fetch(`${API_BASE_URL}/playlists/${playlistId}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (response.ok) {
+                const playlist = await response.json();
+                if (playlist.songs && playlist.songs.length > 0) {
+                    // Obtener índice aleatorio
+                    const randomIndex = Math.floor(Math.random() * playlist.songs.length);
+
+                    // Reproducir desde índice aleatorio
+                    await window.playPlaylistSongByIndex(playlistId, randomIndex);
+                }
+            }
+        } catch (error) {
+            console.error('Error shuffling playlist:', error);
+        }
+    };
+
+    // Eliminar canción de playlist
+    window.removeSongFromPlaylist = async function (playlistId, songId) {
+        const API_BASE_URL = window.location.hostname === 'localhost'
+            ? 'http://localhost:3000/api'
+            : '/api';
+
+        if (!confirm('¿Eliminar esta canción de la playlist?')) {
+            return;
+        }
+
+        try {
+            const token = localStorage.getItem('authToken');
+            const response = await fetch(`${API_BASE_URL}/playlists/${playlistId}/songs/${songId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (response.ok) {
+                // Recargar la playlist
+                showMobilePlaylist(playlistId);
+            } else {
+                alert('Error al eliminar la canción');
+            }
+        } catch (error) {
+            console.error('Error removing song:', error);
+            alert('Error al eliminar la canción');
+        }
+    };
+
 })();

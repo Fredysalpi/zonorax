@@ -372,13 +372,14 @@
 
     <script src="/js/app.js"></script>
     <script src="/js/mobile-player.js"></script>
+    <script src="/js/mobile-playlist-fix.js"></script>
     <script src="/js/playlist-options.js"></script>
 
 
 
     <!-- Mobile Navigation (Bottom) -->
     <nav class="mobile-nav">
-        <a href="#" class="mobile-nav-item active" onclick="goHome(); return false;">
+        <a href="#" class="mobile-nav-item active" onclick="closeMobileSearch(); goHome(); return false;">
             <svg viewBox="0 0 24 24" fill="currentColor">
                 <path d="M12 3L2 12h3v8h6v-6h2v6h6v-8h3L12 3z" />
             </svg>
@@ -391,10 +392,10 @@
             </svg>
             <span>Buscar</span>
         </a>
-        <a href="#" class="mobile-nav-item" onclick="alert('Biblioteca próximamente'); return false;">
-            <svg viewBox="0 0 24 24" fill="currentColor">
+        <a href="#" class="mobile-nav-item" onclick="closeMobileSearch(); showMobileLibrary(); return false;">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
                 <path
-                    d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 9H9V9h10v2zm-4 4H9v-2h6v2zm4-8H9V5h10v2z" />
+                    d="M14.5 2.134a1 1 0 0 1 1 0l6 3.464a1 1 0 0 1 .5.866V19a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V6.464a1 1 0 0 1 .5-.866l6-3.464a1 1 0 0 1 1 0l6 3.464a1 1 0 0 1 .5.866V19" />
             </svg>
             <span>Biblioteca</span>
         </a>
