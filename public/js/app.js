@@ -844,6 +844,14 @@ function updateProgress() {
 }
 
 function playSong(index) {
+    // Verificar si el usuario está autenticado
+    const authToken = localStorage.getItem('authToken');
+    if (!authToken) {
+        console.warn('⚠️ Usuario no autenticado - mostrando modal');
+        showAuthRequiredModal();
+        return;
+    }
+
     if (currentPlaylist.length === 0) {
         console.warn('⚠️ No hay canciones en la playlist');
         return;
@@ -963,8 +971,34 @@ window.goToCurrentArtist = function () {
     }
 }
 
+// Función para mostrar el modal de autenticación requerida
+function showAuthRequiredModal() {
+    const modal = document.getElementById('auth-required-modal');
+    if (modal) {
+        modal.style.display = 'flex';
+        console.log('✅ Modal de autenticación mostrado');
+    }
+}
+
+// Función para cerrar el modal de autenticación
+window.closeAuthModal = function () {
+    const modal = document.getElementById('auth-required-modal');
+    if (modal) {
+        modal.style.display = 'none';
+        console.log('✅ Modal de autenticación cerrado');
+    }
+}
+
 // Función para abrir el modal de agregar a playlist
 window.openAddToPlaylistModal = async function () {
+    // Verificar si el usuario está autenticado
+    const authToken = localStorage.getItem('authToken');
+    if (!authToken) {
+        console.warn('⚠️ Usuario no autenticado - mostrando modal');
+        showAuthRequiredModal();
+        return;
+    }
+
     if (!window.currentSongId) {
         alert('No hay canción seleccionada');
         return;
@@ -1098,6 +1132,14 @@ window.removeSongFromPlaylist = async function (playlistId, songId, songTitle) {
 
 // Función para agregar/quitar de "Me Gusta"
 window.toggleLikeSong = async function () {
+    // Verificar si el usuario está autenticado
+    const authToken = localStorage.getItem('authToken');
+    if (!authToken) {
+        console.warn('⚠️ Usuario no autenticado - mostrando modal');
+        showAuthRequiredModal();
+        return;
+    }
+
     if (!window.currentSongId) {
         alert('No hay canción seleccionada');
         return;
@@ -1428,6 +1470,14 @@ async function loadArtistSocialLinks(artistId) {
 }
 
 function togglePlayPause() {
+    // Verificar si el usuario está autenticado
+    const authToken = localStorage.getItem('authToken');
+    if (!authToken) {
+        console.warn('⚠️ Usuario no autenticado - mostrando modal');
+        showAuthRequiredModal();
+        return;
+    }
+
     if (audioPlayer.paused) {
         audioPlayer.play();
     } else {
@@ -1436,6 +1486,14 @@ function togglePlayPause() {
 }
 
 function playNext() {
+    // Verificar si el usuario está autenticado
+    const authToken = localStorage.getItem('authToken');
+    if (!authToken) {
+        console.warn('⚠️ Usuario no autenticado - mostrando modal');
+        showAuthRequiredModal();
+        return;
+    }
+
     if (currentPlaylist.length === 0) return;
 
     if (isShuffle) {
@@ -1448,6 +1506,14 @@ function playNext() {
 }
 
 function playPrevious() {
+    // Verificar si el usuario está autenticado
+    const authToken = localStorage.getItem('authToken');
+    if (!authToken) {
+        console.warn('⚠️ Usuario no autenticado - mostrando modal');
+        showAuthRequiredModal();
+        return;
+    }
+
     if (currentPlaylist.length === 0) return;
 
     if (audioPlayer.currentTime > 3) {
