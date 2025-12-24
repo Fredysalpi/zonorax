@@ -201,6 +201,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupCreatePlaylist();
     // setupLikeButton eliminado
 
+    // Cargar la última canción reproducida
+    loadLastPlayedSong();
+
     setTimeout(() => {
         saveToHistory();
     }, 500);
@@ -449,10 +452,15 @@ async function createPlaylist() {
 
 async function loadFeaturedPlaylists() {
     try {
+        const container = document.getElementById('featured-playlists');
+        if (!container) {
+            console.warn('Featured playlists container not found');
+            return;
+        }
+
         const response = await fetch(`${API_BASE_URL}/playlists`);
         const playlists = await response.json();
 
-        const container = document.getElementById('featured-playlists');
         const featured = playlists.slice(0, 6);
 
         container.innerHTML = featured.map(playlist => `
@@ -471,12 +479,14 @@ async function loadFeaturedPlaylists() {
 
         document.querySelectorAll('.featured-card').forEach(card => {
             const playBtn = card.querySelector('.play-button');
-            playBtn.addEventListener('click', async (e) => {
-                e.stopPropagation();
-                const playlistId = card.dataset.playlistId;
-                await loadPlaylistSongs(playlistId);
-                playSong(0);
-            });
+            if (playBtn) {
+                playBtn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    const playlistId = card.dataset.playlistId;
+                    await loadPlaylistSongs(playlistId);
+                    playSong(0);
+                });
+            }
 
             card.addEventListener('click', async () => {
                 const playlistId = card.dataset.playlistId;
@@ -834,10 +844,21 @@ function updateProgress() {
 }
 
 function playSong(index) {
-    if (currentPlaylist.length === 0) return;
+    if (currentPlaylist.length === 0) {
+        console.warn('⚠️ No hay canciones en la playlist');
+        return;
+    }
 
     currentSongIndex = index;
     const song = currentPlaylist[currentSongIndex];
+
+    // Validar que la canción existe
+    if (!song) {
+        console.error('❌ No se encontró la canción en el índice:', index);
+        console.error('   - currentPlaylist:', currentPlaylist);
+        console.error('   - currentSongIndex:', currentSongIndex);
+        return;
+    }
 
     // Log de depuración
     console.log('🎵 playSong ejecutándose:');
@@ -867,11 +888,70 @@ function playSong(index) {
         updateMobilePlayerInfo(song);
     }
 
+    // Guardar la última canción reproducida en localStorage
+    try {
+        localStorage.setItem('lastPlayedSong', JSON.stringify({
+            id: song.id,
+            title: song.title,
+            artist_name: song.artist_name,
+            artist_id: song.artist_id,
+            cover_image: song.cover_image,
+            file_url: song.file_url,
+            duration: song.duration
+        }));
+    } catch (error) {
+        console.error('Error guardando última canción:', error);
+    }
 
     audioPlayer.src = song.file_url;
     audioPlayer.play();
 
     fetch(`${API_BASE_URL}/songs/${song.id}/play`, { method: 'POST' });
+}
+
+// Función para cargar la última canción reproducida
+function loadLastPlayedSong() {
+    try {
+        const lastSongData = localStorage.getItem('lastPlayedSong');
+
+        if (lastSongData) {
+            const lastSong = JSON.parse(lastSongData);
+            console.log('🎵 Cargando última canción reproducida:', lastSong.title);
+
+            // Establecer la canción en el reproductor sin reproducirla automáticamente
+            playerCover.src = lastSong.cover_image || '/images/placeholder-cover.jpg';
+            playerSongTitle.textContent = lastSong.title;
+            playerArtist.textContent = lastSong.artist_name || 'Artista Desconocido';
+
+            // Guardar IDs actuales
+            window.currentArtistId = lastSong.artist_id;
+            window.currentSongId = lastSong.id;
+
+            // NO sobrescribir currentPlaylist - dejar que loadReleases() lo maneje
+            // currentPlaylist = [lastSong];
+            // currentSongIndex = 0;
+
+            // Actualizar sidebar derecha con info de la canción
+            updateSongSidebar(lastSong);
+
+            // Verificar si la canción está en "Me Gusta"
+            updateLikeButtonState();
+
+            // Actualizar mobile player si existe
+            if (typeof updateMobilePlayerInfo === 'function') {
+                updateMobilePlayerInfo(lastSong);
+            }
+
+            // Establecer la fuente del audio pero NO reproducir
+            audioPlayer.src = lastSong.file_url;
+
+            console.log('✅ Última canción cargada exitosamente');
+        } else {
+            console.log('ℹ️ No hay última canción guardada');
+        }
+    } catch (error) {
+        console.error('❌ Error cargando última canción:', error);
+    }
 }
 
 // Función para ir a la página del artista actual
@@ -1793,33 +1873,58 @@ function generateUserAvatar() {
 
 // ===== EVENT LISTENERS =====
 function initializeEventListeners() {
-    playPauseBtn.addEventListener('click', togglePlayPause);
-    document.querySelector('.next-btn').addEventListener('click', playNext);
-    document.querySelector('.prev-btn').addEventListener('click', playPrevious);
-    document.querySelector('.shuffle-btn').addEventListener('click', toggleShuffle);
-    document.querySelector('.repeat-btn').addEventListener('click', toggleRepeat);
+    if (playPauseBtn) {
+        playPauseBtn.addEventListener('click', togglePlayPause);
+    }
+
+    const nextBtn = document.querySelector('.next-btn');
+    if (nextBtn) {
+        nextBtn.addEventListener('click', playNext);
+    }
+
+    const prevBtn = document.querySelector('.prev-btn');
+    if (prevBtn) {
+        prevBtn.addEventListener('click', playPrevious);
+    }
+
+    const shuffleBtn = document.querySelector('.shuffle-btn');
+    if (shuffleBtn) {
+        shuffleBtn.addEventListener('click', toggleShuffle);
+    }
+
+    const repeatBtn = document.querySelector('.repeat-btn');
+    if (repeatBtn) {
+        repeatBtn.addEventListener('click', toggleRepeat);
+    }
 
     const progressBar = document.querySelector('.progress-bar');
-    progressBar.addEventListener('click', (e) => {
-        const rect = progressBar.getBoundingClientRect();
-        const percent = (e.clientX - rect.left) / rect.width;
-        audioPlayer.currentTime = percent * audioPlayer.duration;
-    });
+    if (progressBar) {
+        progressBar.addEventListener('click', (e) => {
+            const rect = progressBar.getBoundingClientRect();
+            const percent = (e.clientX - rect.left) / rect.width;
+            audioPlayer.currentTime = percent * audioPlayer.duration;
+        });
+    }
 
     const volumeBar = document.querySelector('.volume-bar');
-    volumeBar.addEventListener('click', (e) => {
-        const rect = volumeBar.getBoundingClientRect();
-        const percent = (e.clientX - rect.left) / rect.width;
-        setVolume(percent);
-    });
+    if (volumeBar) {
+        volumeBar.addEventListener('click', (e) => {
+            const rect = volumeBar.getBoundingClientRect();
+            const percent = (e.clientX - rect.left) / rect.width;
+            setVolume(percent);
+        });
+    }
 
-    document.querySelector('.volume-btn').addEventListener('click', () => {
-        if (currentVolume > 0) {
-            setVolume(0);
-        } else {
-            setVolume(0.8);
-        }
-    });
+    const volumeBtn = document.querySelector('.volume-btn');
+    if (volumeBtn) {
+        volumeBtn.addEventListener('click', () => {
+            if (currentVolume > 0) {
+                setVolume(0);
+            } else {
+                setVolume(0.8);
+            }
+        });
+    }
 
     // Event listener para el botón de "Me Gusta"
     const likeSongBtn = document.getElementById('like-song-btn');
