@@ -38,6 +38,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadSongs();
 
     initializeEventListeners();
+    initializeMobileMenu();
 });
 
 // ===== AUTENTICACIÓN =====
@@ -132,6 +133,34 @@ function initializeEventListeners() {
     // Formularios
     artistForm.addEventListener('submit', handleArtistSubmit);
     songForm.addEventListener('submit', handleSongSubmit);
+}
+
+// ===== MENÚ MÓVIL =====
+function initializeMobileMenu() {
+    const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
+    const sidebar = document.querySelector('.admin-sidebar');
+
+    if (!mobileMenuToggle || !sidebar) return;
+
+    // Toggle del menú
+    mobileMenuToggle.addEventListener('click', () => {
+        sidebar.classList.toggle('active');
+    });
+
+    // Cerrar menú al hacer clic en un enlace de navegación
+    const navLinks = sidebar.querySelectorAll('.nav-link');
+    navLinks.forEach(link => {
+        link.addEventListener('click', () => {
+            sidebar.classList.remove('active');
+        });
+    });
+
+    // Cerrar menú al hacer clic en el overlay
+    sidebar.addEventListener('click', (e) => {
+        if (e.target === sidebar && sidebar.classList.contains('active')) {
+            sidebar.classList.remove('active');
+        }
+    });
 }
 
 // ===== DASHBOARD =====
