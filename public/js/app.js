@@ -508,7 +508,7 @@ async function loadReleases() {
                     </button>
                 </div>
                 <div class="featured-card-title">${song.title}</div>
-                <div class="featured-card-subtitle">${song.artist_name || 'Artista Desconocido'}</div>
+                <div class="featured-card-subtitle" onclick="event.stopPropagation(); window.showArtistPage(${song.artist_id});" style="cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='#1db954'" onmouseout="this.style.color=''">${song.artist_name || 'Artista Desconocido'}</div>
             </div>
         `).join('');
 
@@ -1142,6 +1142,7 @@ async function updateLikeButtonState() {
         const playlistDetail = await playlistDetailResponse.json();
         const isLiked = playlistDetail.songs.some(s => s.id === window.currentSongId);
 
+        // Actualizar botón desktop
         const likeBtn = document.getElementById('like-song-btn');
         if (likeBtn) {
             if (isLiked) {
@@ -1150,6 +1151,26 @@ async function updateLikeButtonState() {
             } else {
                 likeBtn.classList.remove('active');
                 likeBtn.style.color = '';
+            }
+        }
+
+        // Actualizar botón móvil
+        const mobileLikeBtn = document.getElementById('mobile-like-btn');
+        if (mobileLikeBtn) {
+            if (isLiked) {
+                mobileLikeBtn.style.color = '#1db954';
+            } else {
+                mobileLikeBtn.style.color = '#b3b3b3';
+            }
+        }
+
+        // Actualizar botón fullscreen
+        const fullscreenLikeBtn = document.getElementById('fullscreen-like-btn');
+        if (fullscreenLikeBtn) {
+            if (isLiked) {
+                fullscreenLikeBtn.style.color = '#1db954';
+            } else {
+                fullscreenLikeBtn.style.color = '#b3b3b3';
             }
         }
     } catch (error) {
@@ -1399,7 +1420,20 @@ function updateVolumeUI() {
 
 function toggleShuffle() {
     isShuffle = !isShuffle;
-    document.querySelector('.shuffle-btn').classList.toggle('active', isShuffle);
+    const shuffleBtn = document.querySelector('.shuffle-btn');
+    if (shuffleBtn) {
+        shuffleBtn.classList.toggle('active', isShuffle);
+    }
+
+    // Actualizar botón fullscreen
+    const fullscreenShuffleBtn = document.getElementById('fullscreen-shuffle-btn');
+    if (fullscreenShuffleBtn) {
+        if (isShuffle) {
+            fullscreenShuffleBtn.style.color = '#1db954';
+        } else {
+            fullscreenShuffleBtn.style.color = '#b3b3b3';
+        }
+    }
 }
 
 function toggleRepeat() {
@@ -1408,50 +1442,305 @@ function toggleRepeat() {
     repeatMode = modes[(currentIndex + 1) % modes.length];
 
     const repeatBtn = document.querySelector('.repeat-btn');
-    repeatBtn.classList.toggle('active', repeatMode !== 'off');
+    if (repeatBtn) {
+        repeatBtn.classList.toggle('active', repeatMode !== 'off');
 
-    // Remover badge anterior si existe
-    const existingBadge = repeatBtn.querySelector('.repeat-badge');
-    if (existingBadge) {
-        existingBadge.remove();
+        // Remover badge anterior si existe
+        const existingBadge = repeatBtn.querySelector('.repeat-badge');
+        if (existingBadge) {
+            existingBadge.remove();
+        }
+
+        if (repeatMode === 'one') {
+            // Icono normal de repeat
+            repeatBtn.innerHTML = `
+                <svg viewBox="0 0 16 16" width="16" height="16">
+                    <path d="M0 4.75A3.75 3.75 0 0 1 3.75 1h8.5A3.75 3.75 0 0 1 16 4.75v5a3.75 3.75 0 0 1-3.75 3.75H9.81l1.018 1.018a.75.75 0 1 1-1.06 1.06L6.939 12.75l2.829-2.828a.75.75 0 1 1 1.06 1.06L9.811 12h2.439a2.25 2.25 0 0 0 2.25-2.25v-5a2.25 2.25 0 0 0-2.25-2.25h-8.5a2.25 2.25 0 0 0-2.25 2.25v5A2.25 2.25 0 0 0 3.75 12H5v1.5H3.75A3.75 3.75 0 0 1 0 9.75v-5z" fill="currentColor"/>
+                </svg>
+            `;
+            // Agregar badge "1" fuera del icono
+            const badge = document.createElement('span');
+            badge.className = 'repeat-badge';
+            badge.textContent = '1';
+            badge.style.cssText = `
+                position: absolute;
+                top: -4px;
+                right: -4px;
+                background-color: #1db954;
+                color: #000;
+                font-size: 10px;
+                font-weight: 700;
+                width: 14px;
+                height: 14px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                pointer-events: none;
+            `;
+            repeatBtn.appendChild(badge);
+        } else {
+            repeatBtn.innerHTML = `
+                <svg viewBox="0 0 16 16" width="16" height="16">
+                    <path d="M0 4.75A3.75 3.75 0 0 1 3.75 1h8.5A3.75 3.75 0 0 1 16 4.75v5a3.75 3.75 0 0 1-3.75 3.75H9.81l1.018 1.018a.75.75 0 1 1-1.06 1.06L6.939 12.75l2.829-2.828a.75.75 0 1 1 1.06 1.06L9.811 12h2.439a2.25 2.25 0 0 0 2.25-2.25v-5a2.25 2.25 0 0 0-2.25-2.25h-8.5a2.25 2.25 0 0 0-2.25 2.25v5A2.25 2.25 0 0 0 3.75 12H5v1.5H3.75A3.75 3.75 0 0 1 0 9.75v-5z" fill="currentColor"/>
+                </svg>
+            `;
+        }
     }
 
-    if (repeatMode === 'one') {
-        // Icono normal de repeat
-        repeatBtn.innerHTML = `
-            <svg viewBox="0 0 16 16" width="16" height="16">
-                <path d="M0 4.75A3.75 3.75 0 0 1 3.75 1h8.5A3.75 3.75 0 0 1 16 4.75v5a3.75 3.75 0 0 1-3.75 3.75H9.81l1.018 1.018a.75.75 0 1 1-1.06 1.06L6.939 12.75l2.829-2.828a.75.75 0 1 1 1.06 1.06L9.811 12h2.439a2.25 2.25 0 0 0 2.25-2.25v-5a2.25 2.25 0 0 0-2.25-2.25h-8.5a2.25 2.25 0 0 0-2.25 2.25v5A2.25 2.25 0 0 0 3.75 12H5v1.5H3.75A3.75 3.75 0 0 1 0 9.75v-5z" fill="currentColor"/>
-            </svg>
-        `;
-        // Agregar badge "1" fuera del icono
-        const badge = document.createElement('span');
-        badge.className = 'repeat-badge';
-        badge.textContent = '1';
-        badge.style.cssText = `
-            position: absolute;
-            top: -4px;
-            right: -4px;
-            background-color: #1db954;
-            color: #000;
-            font-size: 10px;
-            font-weight: 700;
-            width: 14px;
-            height: 14px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            pointer-events: none;
-        `;
-        repeatBtn.appendChild(badge);
-    } else {
-        repeatBtn.innerHTML = `
-            <svg viewBox="0 0 16 16" width="16" height="16">
-                <path d="M0 4.75A3.75 3.75 0 0 1 3.75 1h8.5A3.75 3.75 0 0 1 16 4.75v5a3.75 3.75 0 0 1-3.75 3.75H9.81l1.018 1.018a.75.75 0 1 1-1.06 1.06L6.939 12.75l2.829-2.828a.75.75 0 1 1 1.06 1.06L9.811 12h2.439a2.25 2.25 0 0 0 2.25-2.25v-5a2.25 2.25 0 0 0-2.25-2.25h-8.5a2.25 2.25 0 0 0-2.25 2.25v5A2.25 2.25 0 0 0 3.75 12H5v1.5H3.75A3.75 3.75 0 0 1 0 9.75v-5z" fill="currentColor"/>
-            </svg>
-        `;
+    // Actualizar botón fullscreen
+    const fullscreenRepeatBtn = document.getElementById('fullscreen-repeat-btn');
+    if (fullscreenRepeatBtn) {
+        // Remover badge anterior si existe
+        const existingBadge = fullscreenRepeatBtn.querySelector('.repeat-badge');
+        if (existingBadge) {
+            existingBadge.remove();
+        }
+
+        if (repeatMode === 'off') {
+            fullscreenRepeatBtn.style.color = '#b3b3b3';
+        } else if (repeatMode === 'all') {
+            fullscreenRepeatBtn.style.color = '#1db954';
+        } else if (repeatMode === 'one') {
+            fullscreenRepeatBtn.style.color = '#1db954';
+            // Agregar badge "1"
+            const badge = document.createElement('span');
+            badge.className = 'repeat-badge';
+            badge.textContent = '1';
+            badge.style.cssText = `
+                position: absolute;
+                top: 0px;
+                right: 0px;
+                background-color: #1db954;
+                color: #000;
+                font-size: 10px;
+                font-weight: 700;
+                width: 14px;
+                height: 14px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                pointer-events: none;
+            `;
+            fullscreenRepeatBtn.appendChild(badge);
+        }
     }
 }
+
+// ===== FUNCIONES GLOBALES DE NAVEGACIÓN DE ARTISTA =====
+// Estas funciones deben estar disponibles globalmente para los onclick inline
+window.showArtistPage = async function (artistId) {
+    try {
+        const artistResponse = await fetch(`${API_BASE_URL}/artists/${artistId}`);
+        const artist = await artistResponse.json();
+
+        const songsResponse = await fetch(`${API_BASE_URL}/songs`);
+        const allSongs = await songsResponse.json();
+        const artistSongs = allSongs.filter(s => s.artist_id === artistId);
+
+        const contentWrapper = document.querySelector('.content-wrapper');
+        let html = `
+            <div class="artist-page">
+                <div class="artist-hero" style="
+                    background: linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.7) 100%), 
+                                url('${artist.cover_image || ''}');
+                    background-size: cover;
+                    background-position: center;
+                    padding: 80px 24px 40px;
+                    margin: -24px -24px 24px -24px;
+                    border-radius: 8px 8px 0 0;
+                    min-height: 400px;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: flex-end;
+                ">
+                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+                        ${artist.is_verified ? '<img src="/images/verificado.png" alt="Verificado" style="width: 24px; height: 24px;">' : ''}
+                        <span style="font-size: 14px; font-weight: 600;">${artist.is_verified ? 'Artista verificado' : 'Artista'}</span>
+                    </div>
+                    <h1 style="font-size: 72px; font-weight: 900; margin-bottom: 16px;">${artist.name}</h1>
+                    <p style="font-size: 16px; color: var(--text-base); margin-bottom: 16px;">${artistSongs.length} oyente mensual</p>
+                </div>
+                
+                <div style="padding: 24px; background: linear-gradient(180deg, rgba(0,0,0,0.2) 0%, transparent 100%);">
+                    <div style="display: flex; align-items: center; gap: 24px; margin-bottom: 32px;">
+                        <button onclick="window.playArtistSongs(${artistId})" style="
+                            width: 56px;
+                            height: 56px;
+                            border-radius: 50%;
+                            background: var(--accent-base);
+                            border: none;
+                            color: var(--bg-base);
+                            cursor: pointer;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            font-size: 24px;
+                            transition: all 0.2s;
+                        " onmouseover="this.style.transform='scale(1.06)'" onmouseout="this.style.transform='scale(1)'">
+                            ▶
+                        </button>
+                    </div>
+                    
+                    <div class="section-header" style="margin-bottom: 16px;">
+                        <h2>Popular</h2>
+                    </div>
+                    
+                    <div class="song-list" style="margin-bottom: 40px;">
+        `;
+
+        artistSongs.forEach((song, index) => {
+            html += `
+                <div class="song-row" onclick="window.playSongById(${song.id})" style="
+                    display: grid;
+                    grid-template-columns: 40px 1fr auto 40px;
+                    gap: 16px;
+                    padding: 8px;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    align-items: center;
+                    transition: background-color 0.2s;
+                " onmouseover="this.style.backgroundColor='rgba(255,255,255,0.1)'" onmouseout="this.style.backgroundColor='transparent'">
+                    <div style="display: flex; align-items: center; justify-content: center;">
+                        <span style="color: var(--text-subdued); font-size: 16px;">${index + 1}</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        ${song.cover_image ? `<img src="${song.cover_image}" alt="${song.title}" style="width: 40px; height: 40px; border-radius: 4px;">` : ''}
+                        <div>
+                            <div style="font-size: 16px; color: var(--text-base); margin-bottom: 4px;">${song.title}</div>
+                            <div style="font-size: 14px; color: var(--text-subdued);">${artist.name}</div>
+                        </div>
+                    </div>
+                    <div style="color: var(--text-subdued); font-size: 14px;">${formatTime(song.duration)}</div>
+                    <button class="song-more-btn" onclick="event.stopPropagation(); toggleSongPlaylist(${song.id}, event)" title="Agregar a playlist">
+                        <svg viewBox="0 0 16 16" width="16" height="16">
+                            <path d="M15.25 8a.75.75 0 0 1-.75.75H8.75v5.75a.75.75 0 0 1-1.5 0V8.75H1.5a.75.75 0 0 1 0-1.5h5.75V1.5a.75.75 0 0 1 1.5 0v5.75h5.75a.75.75 0 0 1 .75.75z" fill="currentColor"/>
+                        </svg>
+                    </button>
+                </div>
+            `;
+        });
+
+        html += `
+                    </div>
+        `;
+
+        if (artist.bio || artist.cover_image_2) {
+            html += `
+                <div class="artist-bio-section" style="
+                    background: linear-gradient(180deg, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.8) 100%), 
+                                url('${artist.cover_image_2 || artist.cover_image || ''}');
+                    background-size: cover;
+                    background-position: center;
+                    padding: 60px 40px;
+                    border-radius: 12px;
+                    margin-top: 40px;
+                    min-height: 300px;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: center;
+                ">
+                    <h3 style="font-size: 28px; font-weight: 700; margin-bottom: 20px; color: var(--text-base);">Sobre ${artist.name}</h3>
+                    ${artist.bio ? `
+                        <p style="font-size: 16px; line-height: 1.8; color: var(--text-base); max-width: 900px;">
+                            ${artist.bio}
+                        </p>
+                    ` : '<p style="font-size: 16px; color: var(--text-subdued);">No hay biografía disponible.</p>'}
+                </div>
+            `;
+        }
+
+        if (artist.social_links) {
+            try {
+                const socials = typeof artist.social_links === 'string'
+                    ? JSON.parse(artist.social_links)
+                    : artist.social_links;
+
+                if (socials && Object.keys(socials).length > 0) {
+                    html += `
+                        <div style="margin-top: 32px;">
+                            <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 16px; color: var(--text-base);">Redes Sociales</h3>
+                            <div style="display: flex; flex-wrap: wrap; gap: 12px;">
+                    `;
+
+                    Object.entries(socials).forEach(([platform, url]) => {
+                        const socialIcons = {
+                            'facebook': '/images/facebook.png',
+                            'instagram': '/images/instagram.png',
+                            'whatsapp': '/images/whatsapp.png'
+                        };
+
+                        const iconUrl = socialIcons[platform.toLowerCase()] || '/images/facebook.png';
+
+                        html += `
+                            <a href="${url}" target="_blank" 
+                                style="display: flex; align-items: center; gap: 8px; padding: 12px 20px; 
+                                       background: var(--bg-highlight); border-radius: 24px; 
+                                       color: var(--text-base); text-decoration: none; 
+                                       transition: all 0.2s; border: 1px solid var(--border-subtle);"
+                                onmouseover="this.style.background='var(--bg-tint)'; this.style.transform='translateY(-2px)';" 
+                                onmouseout="this.style.background='var(--bg-highlight)'; this.style.transform='translateY(0)';">
+                                <img src="${iconUrl}" alt="${platform}" style="width: 20px; height: 20px;">
+                                <span style="font-size: 14px; font-weight: 600; text-transform: capitalize;">${platform}</span>
+                            </a>
+                        `;
+                    });
+
+                    html += `
+                            </div>
+                        </div>
+                    `;
+                }
+            } catch (e) {
+                console.error('Error parsing social links:', e);
+            }
+        }
+
+        html += `
+                    </div>
+                </div>
+            </div>
+        `;
+
+        contentWrapper.innerHTML = html;
+
+        if (typeof saveToHistory === 'function') {
+            saveToHistory();
+        }
+
+    } catch (error) {
+        console.error('Error loading artist page:', error);
+    }
+};
+
+window.playArtistSongs = async function (artistId) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/songs`);
+        const allSongs = await response.json();
+        const artistSongs = allSongs.filter(s => s.artist_id === artistId);
+
+        if (artistSongs.length > 0) {
+            currentPlaylist = artistSongs;
+            currentSongIndex = 0;
+            playSong(0);
+        }
+    } catch (error) {
+        console.error('Error playing artist songs:', error);
+    }
+};
+
+window.playSongById = async function (songId) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/songs/${songId}`);
+        const song = await response.json();
+        currentPlaylist = [song];
+        currentSongIndex = 0;
+        playSong(0);
+    } catch (error) {
+        console.error('Error playing song:', error);
+    }
+};
 
 // ===== GENERAR AVATAR DE USUARIO =====
 function generateUserAvatar() {
@@ -1735,7 +2024,7 @@ function initializeEventListeners() {
                         ${song.cover_image ? `<img src="${song.cover_image}" alt="${song.title}" style="width: 100%; height: 100%; object-fit: cover; border-radius: 8px;">` : ''}
                     </div>
                     <div class="featured-card-title">${song.title}</div>
-                    <div class="featured-card-subtitle">${song.artist_name}</div>
+                    <div class="featured-card-subtitle" onclick="event.stopPropagation(); window.showArtistPage(${song.artist_id});" style="cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='#1db954'" onmouseout="this.style.color=''">${song.artist_name}</div>
                 </div>
             `;
             });
@@ -1752,234 +2041,6 @@ function initializeEventListeners() {
         // Solo guardar estado si no estamos navegando
         if (!isNavigating) {
             saveToHistory();
-        }
-    }
-
-    // ===== PÃGINA DEL ARTISTA =====
-    window.showArtistPage = async function (artistId) {
-        try {
-            const artistResponse = await fetch(`${API_BASE_URL}/artists/${artistId}`);
-            const artist = await artistResponse.json();
-
-            const songsResponse = await fetch(`${API_BASE_URL}/songs`);
-            const allSongs = await songsResponse.json();
-            const artistSongs = allSongs.filter(s => s.artist_id === artistId);
-
-            const contentWrapper = document.querySelector('.content-wrapper');
-            let html = `
-            <div class="artist-page">
-                <div class="artist-hero" style="
-                    background: linear-gradient(180deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.7) 100%), 
-                                url('${artist.cover_image || ''}');
-                    background-size: cover;
-                    background-position: center;
-                    padding: 80px 24px 40px;
-                    margin: -24px -24px 24px -24px;
-                    border-radius: 8px 8px 0 0;
-                    min-height: 400px;
-                    display: flex;
-                    flex-direction: column;
-                    justify-content: flex-end;
-                ">
-                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
-                        ${artist.is_verified ? '<img src="/images/verificado.png" alt="Verificado" style="width: 24px; height: 24px;">' : ''}
-                        <span style="font-size: 14px; font-weight: 600;">${artist.is_verified ? 'Artista verificado' : 'Artista'}</span>
-                    </div>
-                    <h1 style="font-size: 72px; font-weight: 900; margin-bottom: 16px;">${artist.name}</h1>
-                    <p style="font-size: 16px; color: var(--text-base); margin-bottom: 16px;">${artistSongs.length} oyente mensual</p>
-                </div>
-                
-                <div style="padding: 24px; background: linear-gradient(180deg, rgba(0,0,0,0.2) 0%, transparent 100%);">
-                    <div style="display: flex; align-items: center; gap: 24px; margin-bottom: 32px;">
-                        <button onclick="playArtistSongs(${artistId})" style="
-                            width: 56px;
-                            height: 56px;
-                            border-radius: 50%;
-                            background: var(--accent-base);
-                            border: none;
-                            color: var(--bg-base);
-                            cursor: pointer;
-                            display: flex;
-                            align-items: center;
-                            justify-content: center;
-                            font-size: 24px;
-                            transition: all 0.2s;
-                        " onmouseover="this.style.transform='scale(1.06)'" onmouseout="this.style.transform='scale(1)'">
-                            ▶
-                        </button>
-                    </div>
-                    
-                    <div class="section-header" style="margin-bottom: 16px;">
-                        <h2>Popular</h2>
-                    </div>
-                    
-                    <div class="song-list" style="margin-bottom: 40px;">
-        `;
-
-            artistSongs.forEach((song, index) => {
-                html += `
-                <div class="song-row" onclick="playSongById(${song.id})" style="
-                    display: grid;
-                    grid-template-columns: 40px 1fr auto 40px;
-                    gap: 16px;
-                    padding: 8px;
-                    border-radius: 4px;
-                    cursor: pointer;
-                    align-items: center;
-                    transition: background-color 0.2s;
-                " onmouseover="this.style.backgroundColor='rgba(255,255,255,0.1)'" onmouseout="this.style.backgroundColor='transparent'">
-                    <div style="display: flex; align-items: center; justify-content: center;">
-                        <span style="color: var(--text-subdued); font-size: 16px;">${index + 1}</span>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 12px;">
-                        ${song.cover_image ? `<img src="${song.cover_image}" alt="${song.title}" style="width: 40px; height: 40px; border-radius: 4px;">` : ''}
-                        <div>
-                            <div style="font-size: 16px; color: var(--text-base); margin-bottom: 4px;">${song.title}</div>
-                            <div style="font-size: 14px; color: var(--text-subdued);">${artist.name}</div>
-                        </div>
-                    </div>
-                    <div style="color: var(--text-subdued); font-size: 14px;">${formatTime(song.duration)}</div>
-                    <button class="song-more-btn" onclick="toggleSongPlaylist(${song.id}, event)" title="Agregar a playlist">
-                        <svg viewBox="0 0 16 16" width="16" height="16">
-                            <path d="M15.25 8a.75.75 0 0 1-.75.75H8.75v5.75a.75.75 0 0 1-1.5 0V8.75H1.5a.75.75 0 0 1 0-1.5h5.75V1.5a.75.75 0 0 1 1.5 0v5.75h5.75a.75.75 0 0 1 .75.75z" fill="currentColor"/>
-                        </svg>
-                    </button>
-                </div>
-            `;
-            });
-
-            html += `
-                    </div>
-        `;
-
-            if (artist.bio || artist.cover_image_2) {
-                html += `
-                <div class="artist-bio-section" style="
-                    background: linear-gradient(180deg, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.8) 100%), 
-                                url('${artist.cover_image_2 || artist.cover_image || ''}');
-                    background-size: cover;
-                    background-position: center;
-                    padding: 60px 40px;
-                    border-radius: 12px;
-                    margin-top: 40px;
-                    min-height: 300px;
-                    display: flex;
-                    flex-direction: column;
-                    justify-content: center;
-                ">
-                    <h3 style="font-size: 28px; font-weight: 700; margin-bottom: 20px; color: var(--text-base);">Sobre ${artist.name}</h3>
-                    ${artist.bio ? `
-                        <p style="font-size: 16px; line-height: 1.8; color: var(--text-base); max-width: 900px;">
-                            ${artist.bio}
-                        </p>
-                    ` : '<p style="font-size: 16px; color: var(--text-subdued);">No hay biografía disponible.</p>'}
-                </div>
-            `;
-            }
-
-            if (artist.social_links) {
-                try {
-                    const socials = typeof artist.social_links === 'string'
-                        ? JSON.parse(artist.social_links)
-                        : artist.social_links;
-
-                    if (socials && Object.keys(socials).length > 0) {
-                        html += `
-                        <div style="margin-top: 32px;">
-                            <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 16px; color: var(--text-base);">Redes Sociales</h3>
-                            <div style="display: flex; flex-wrap: wrap; gap: 12px;">
-                    `;
-
-                        Object.entries(socials).forEach(([platform, url]) => {
-                            // Mapeo de plataformas a imágenes PNG
-                            const socialIcons = {
-                                'facebook': '/images/facebook.png',
-                                'instagram': '/images/instagram.png',
-                                'whatsapp': '/images/whatsapp.png'
-                            };
-
-                            const iconUrl = socialIcons[platform.toLowerCase()] || '/images/facebook.png';
-
-                            html += `
-                            <a href="${url}" target="_blank" 
-                                style="display: flex; align-items: center; gap: 8px; padding: 12px 20px; 
-                                       background: var(--bg-highlight); border-radius: 24px; 
-                                       color: var(--text-base); text-decoration: none; 
-                                       transition: all 0.2s; border: 1px solid var(--border-subtle);"
-                                onmouseover="this.style.background='var(--bg-tint)'; this.style.transform='translateY(-2px)';" 
-                                onmouseout="this.style.background='var(--bg-highlight)'; this.style.transform='translateY(0)';">
-                                <img src="${iconUrl}" alt="${platform}" style="width: 20px; height: 20px;">
-                                <span style="font-size: 14px; font-weight: 600; text-transform: capitalize;">${platform}</span>
-                            </a>
-                        `;
-                        });
-
-                        html += `
-                            </div>
-                        </div>
-                    `;
-                    }
-                } catch (e) {
-                    console.error('Error parsing social links:', e);
-                }
-            }
-
-            html += `
-                    </div>
-                </div>
-            </div>
-        `;
-
-            contentWrapper.innerHTML = html;
-
-            saveToHistory();
-
-        } catch (error) {
-            console.error('Error loading artist page:', error);
-        }
-    }
-
-    window.playArtistSongs = async function (artistId) {
-        try {
-            const response = await fetch(`${API_BASE_URL}/songs`);
-            const allSongs = await response.json();
-            const artistSongs = allSongs.filter(s => s.artist_id === artistId);
-            if (artistSongs.length > 0) {
-                currentPlaylist = artistSongs;
-                currentSongIndex = 0;
-                playSong(0);
-            }
-        } catch (error) {
-            console.error('Error:', error);
-        }
-    }
-
-    window.playSongById = async function (songId) {
-        try {
-            const response = await fetch(`${API_BASE_URL}/songs/${songId}`);
-            const song = await response.json();
-            currentPlaylist = [song];
-            currentSongIndex = 0;
-            playSong(0);
-        } catch (error) {
-            console.error('Error:', error);
-        }
-    }
-
-    // ===== PÁGINA DEL ARTISTA =====
-    window.playArtistSongs = async function (artistId) {
-        try {
-            const response = await fetch(`${API_BASE_URL}/songs`);
-            const allSongs = await response.json();
-            const artistSongs = allSongs.filter(s => s.artist_id === artistId);
-
-            if (artistSongs.length > 0) {
-                currentPlaylist = artistSongs;
-                currentSongIndex = 0;
-                playSong(0);
-            }
-        } catch (error) {
-            console.error('Error playing artist songs:', error);
         }
     }
 

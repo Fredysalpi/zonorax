@@ -29,15 +29,26 @@
                          style="font-size: 14px; font-weight: 600; color: #ffffff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 2px;">
                         Selecciona una canción
                     </div>
-                    <div class="song-artist" id="mobile-song-artist" 
-                         style="font-size: 12px; color: #b3b3b3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    <div class="song-artist" id="mobile-song-artist" data-artist-id=""
+                         style="font-size: 12px; color: #b3b3b3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; transition: color 0.2s;"
+                         onmouseover="this.style.color='#1db954'" 
+                         onmouseout="this.style.color='#b3b3b3'">
                         Artista
                     </div>
                 </div>
                 
                 <div style="display: flex; align-items: center; gap: 4px; flex-shrink: 0;">
+                    <button id="mobile-add-to-playlist-btn" 
+                            style="background: none; border: none; color: #b3b3b3; cursor: pointer; padding: 8px; display: flex; align-items: center; justify-content: center;"
+                            title="Agregar a playlist">
+                        <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+                            <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                        </svg>
+                    </button>
+                    
                     <button id="mobile-like-btn" 
-                            style="background: none; border: none; color: #b3b3b3; cursor: pointer; padding: 8px; display: flex; align-items: center; justify-content: center;">
+                            style="background: none; border: none; color: #b3b3b3; cursor: pointer; padding: 8px; display: flex; align-items: center; justify-content: center;"
+                            title="Me gusta">
                         <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
                             <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
                         </svg>
@@ -79,11 +90,15 @@
         const miniPlayer = document.getElementById('mobile-player-mini');
         const playBtn = document.getElementById('mobile-play-btn');
         const likeBtn = document.getElementById('mobile-like-btn');
+        const addToPlaylistBtn = document.getElementById('mobile-add-to-playlist-btn');
 
         if (miniPlayer) {
             miniPlayer.addEventListener('click', function (e) {
                 // No expandir si se hizo click en botones
-                if (e.target.closest('#mobile-play-btn') || e.target.closest('#mobile-like-btn')) {
+                if (e.target.closest('#mobile-play-btn') ||
+                    e.target.closest('#mobile-like-btn') ||
+                    e.target.closest('#mobile-add-to-playlist-btn') ||
+                    e.target.closest('#mobile-song-artist')) {
                     return;
                 }
                 console.log('🎵 Mini player clicked!');
@@ -101,12 +116,34 @@
             });
         }
 
+        if (addToPlaylistBtn) {
+            addToPlaylistBtn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                console.log('➕ Add to playlist button clicked!');
+                if (typeof window.openAddToPlaylistModal === 'function') {
+                    window.openAddToPlaylistModal();
+                }
+            });
+        }
+
         if (likeBtn) {
             likeBtn.addEventListener('click', function (e) {
                 e.stopPropagation();
                 console.log('❤️ Like button clicked!');
-                if (typeof toggleLike === 'function') {
-                    toggleLike();
+                if (typeof window.toggleLikeSong === 'function') {
+                    window.toggleLikeSong();
+                }
+            });
+        }
+
+        // Event listener para el nombre del artista en el mini player
+        const mobileArtist = document.getElementById('mobile-song-artist');
+        if (mobileArtist) {
+            mobileArtist.addEventListener('click', function (e) {
+                e.stopPropagation();
+                const artistId = this.getAttribute('data-artist-id');
+                if (artistId && typeof window.showArtistPage === 'function') {
+                    window.showArtistPage(parseInt(artistId));
                 }
             });
         }
@@ -129,75 +166,269 @@
         console.log('🔨 Creating fullscreen player...');
 
         const fullscreenHTML = `
-            <div class="player-fullscreen" id="player-fullscreen">
-                <div class="player-fullscreen-header">
-                    <button onclick="closeFullscreenPlayer()">
+            <div class="player-fullscreen" id="player-fullscreen" style="
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100dvh;
+                background: linear-gradient(180deg, #1a1a1a 0%, #121212 100%);
+                z-index: 9999;
+                display: none;
+                flex-direction: column;
+                color: #ffffff;
+                overflow: hidden;
+            ">
+                <!-- Header -->
+                <div class="player-fullscreen-header" style="
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding: 16px;
+                    flex-shrink: 0;
+                ">
+                    <button onclick="closeFullscreenPlayer()" style="
+                        background: none;
+                        border: none;
+                        color: #ffffff;
+                        cursor: pointer;
+                        padding: 8px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                    ">
                         <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
                             <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
                         </svg>
                     </button>
-                    <div class="player-fullscreen-title" id="fullscreen-playlist-title">Reproduciendo</div>
-                    <button onclick="alert('Opciones próximamente')">
+                    <div class="player-fullscreen-title" id="fullscreen-playlist-title" style="
+                        font-size: 14px;
+                        font-weight: 600;
+                        color: #ffffff;
+                    ">Reproduciendo</div>
+                    <button onclick="alert('Opciones próximamente')" style="
+                        background: none;
+                        border: none;
+                        color: #ffffff;
+                        cursor: pointer;
+                        padding: 8px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                    ">
                         <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
                             <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
                         </svg>
                     </button>
                 </div>
 
-                <img class="player-fullscreen-cover" id="fullscreen-cover" src="/images/default-cover.png" alt="Cover">
-
-                <div class="player-fullscreen-info">
-                    <div class="player-fullscreen-song-title" id="fullscreen-song-title">Selecciona una canción</div>
-                    <div class="player-fullscreen-artist" id="fullscreen-artist">Artista</div>
+                <!-- Cover con botones + y ❤️ -->
+                <div style="
+                    flex: 1;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: center;
+                    align-items: center;
+                    padding: 0 24px;
+                    min-height: 0;
+                ">
+                    <img class="player-fullscreen-cover" id="fullscreen-cover" src="/images/default-cover.png" alt="Cover" style="
+                        width: min(85vw, 400px);
+                        height: min(85vw, 400px);
+                        border-radius: 8px;
+                        object-fit: cover;
+                        box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+                        margin-bottom: 20px;
+                    ">
+                    
+                    <!-- Botones + y ❤️ debajo de la portada -->
+                    <div style="
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        width: min(85vw, 400px);
+                        margin-bottom: 16px;
+                    ">
+                        <button id="fullscreen-like-btn" style="
+                            background: none;
+                            border: none;
+                            color: #b3b3b3;
+                            cursor: pointer;
+                            padding: 8px;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            transition: color 0.2s;
+                        " title="Me gusta">
+                            <svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor">
+                                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                            </svg>
+                        </button>
+                        
+                        <button id="fullscreen-add-to-playlist-btn" style="
+                            background: none;
+                            border: none;
+                            color: #b3b3b3;
+                            cursor: pointer;
+                            padding: 8px;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            transition: color 0.2s;
+                        " title="Agregar a playlist">
+                            <svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor">
+                                <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                            </svg>
+                        </button>
+                    </div>
                 </div>
 
-                <div class="player-fullscreen-progress">
-                    <div class="player-fullscreen-progress-bar" onclick="seekFullscreen(event)">
-                        <div class="player-fullscreen-progress-fill" id="fullscreen-progress-fill" style="width: 0%"></div>
+                <!-- Info de la canción -->
+                <div class="player-fullscreen-info" style="
+                    padding: 0 24px 16px;
+                    text-align: center;
+                    flex-shrink: 0;
+                ">
+                    <div class="player-fullscreen-song-title" id="fullscreen-song-title" style="
+                        font-size: 20px;
+                        font-weight: 700;
+                        color: #ffffff;
+                        margin-bottom: 8px;
+                        white-space: nowrap;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                    ">Selecciona una canción</div>
+                    <div class="player-fullscreen-artist" id="fullscreen-artist" data-artist-id=""
+                         style="
+                            font-size: 16px;
+                            color: #b3b3b3;
+                            cursor: pointer;
+                            transition: color 0.2s;
+                            white-space: nowrap;
+                            overflow: hidden;
+                            text-overflow: ellipsis;
+                         "
+                         onmouseover="this.style.color='#1db954'" 
+                         onmouseout="this.style.color='#b3b3b3'">Artista</div>
+                </div>
+
+                <!-- Barra de progreso -->
+                <div class="player-fullscreen-progress" style="
+                    padding: 0 24px 20px;
+                    flex-shrink: 0;
+                ">
+                    <div class="player-fullscreen-progress-bar" onclick="seekFullscreen(event)" style="
+                        width: 100%;
+                        height: 4px;
+                        background: rgba(255,255,255,0.2);
+                        border-radius: 2px;
+                        cursor: pointer;
+                        margin-bottom: 8px;
+                        position: relative;
+                    ">
+                        <div class="player-fullscreen-progress-fill" id="fullscreen-progress-fill" style="
+                            width: 0%;
+                            height: 100%;
+                            background: #1db954;
+                            border-radius: 2px;
+                            transition: width 0.1s;
+                        "></div>
                     </div>
-                    <div class="player-fullscreen-time">
+                    <div class="player-fullscreen-time" style="
+                        display: flex;
+                        justify-content: space-between;
+                        font-size: 12px;
+                        color: #b3b3b3;
+                    ">
                         <span id="fullscreen-current-time">0:00</span>
                         <span id="fullscreen-duration">0:00</span>
                     </div>
                 </div>
 
-                <div class="player-fullscreen-controls">
-                    <button onclick="toggleShuffle()">
-                        <svg viewBox="0 0 24 24" fill="currentColor">
+                <!-- Controles de reproducción -->
+                <div class="player-fullscreen-controls" style="
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    gap: 12px;
+                    padding: 0 24px 24px;
+                    flex-shrink: 0;
+                ">
+                    <button id="fullscreen-shuffle-btn" onclick="toggleShuffle()" style="
+                        background: none;
+                        border: none;
+                        color: #b3b3b3;
+                        cursor: pointer;
+                        padding: 8px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        transition: color 0.2s;
+                    " title="Aleatorio">
+                        <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
                             <path d="M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z"/>
                         </svg>
                     </button>
-                    <button onclick="playPrevious()">
-                        <svg viewBox="0 0 24 24" fill="currentColor">
+                    <button onclick="playPrevious()" style="
+                        background: none;
+                        border: none;
+                        color: #ffffff;
+                        cursor: pointer;
+                        padding: 8px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                    ">
+                        <svg viewBox="0 0 24 24" width="32" height="32" fill="currentColor">
                             <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/>
                         </svg>
                     </button>
-                    <button class="play-pause-btn" id="fullscreen-play-btn" onclick="togglePlayPause()">
-                        <svg viewBox="0 0 24 24" fill="currentColor">
+                    <button class="play-pause-btn" id="fullscreen-play-btn" onclick="togglePlayPause()" style="
+                        background: #ffffff;
+                        border: none;
+                        color: #000000;
+                        cursor: pointer;
+                        padding: 0;
+                        width: 64px;
+                        height: 64px;
+                        border-radius: 50%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                    ">
+                        <svg viewBox="0 0 24 24" width="32" height="32" fill="currentColor">
                             <path d="M8 5v14l11-7z"/>
                         </svg>
                     </button>
-                    <button onclick="playNext()">
-                        <svg viewBox="0 0 24 24" fill="currentColor">
+                    <button onclick="playNext()" style="
+                        background: none;
+                        border: none;
+                        color: #ffffff;
+                        cursor: pointer;
+                        padding: 8px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                    ">
+                        <svg viewBox="0 0 24 24" width="32" height="32" fill="currentColor">
                             <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/>
                         </svg>
                     </button>
-                    <button onclick="toggleRepeat()">
-                        <svg viewBox="0 0 24 24" fill="currentColor">
+                    <button id="fullscreen-repeat-btn" onclick="toggleRepeat()" style="
+                        background: none;
+                        border: none;
+                        color: #b3b3b3;
+                        cursor: pointer;
+                        padding: 8px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        transition: color 0.2s;
+                        position: relative;
+                    " title="Repetir">
+                        <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
                             <path d="M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z"/>
-                        </svg>
-                    </button>
-                </div>
-
-                <div class="player-fullscreen-actions">
-                    <button onclick="alert('Conectar dispositivo próximamente')">
-                        <svg viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M17 1H7c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-2-2-2zm0 18H7V5h10v14z"/>
-                        </svg>
-                    </button>
-                    <button onclick="alert('Compartir próximamente')">
-                        <svg viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z"/>
                         </svg>
                     </button>
                 </div>
@@ -210,6 +441,43 @@
         const created = document.getElementById('player-fullscreen');
         console.log('🎬 Created element:', created);
         console.log('📏 Element styles:', created ? window.getComputedStyle(created).display : 'N/A');
+
+        // Event listener para el nombre del artista en el fullscreen player
+        const fullscreenArtist = document.getElementById('fullscreen-artist');
+        if (fullscreenArtist) {
+            fullscreenArtist.addEventListener('click', function (e) {
+                e.stopPropagation();
+                const artistId = this.getAttribute('data-artist-id');
+                if (artistId && typeof window.showArtistPage === 'function') {
+                    window.showArtistPage(parseInt(artistId));
+                    closeFullscreenPlayer();
+                }
+            });
+        }
+
+        // Event listener para el botón de agregar a playlist en fullscreen
+        const fullscreenAddBtn = document.getElementById('fullscreen-add-to-playlist-btn');
+        if (fullscreenAddBtn) {
+            fullscreenAddBtn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                console.log('➕ Fullscreen add to playlist clicked!');
+                if (typeof window.openAddToPlaylistModal === 'function') {
+                    window.openAddToPlaylistModal();
+                }
+            });
+        }
+
+        // Event listener para el botón de me gusta en fullscreen
+        const fullscreenLikeBtn = document.getElementById('fullscreen-like-btn');
+        if (fullscreenLikeBtn) {
+            fullscreenLikeBtn.addEventListener('click', function (e) {
+                e.stopPropagation();
+                console.log('❤️ Fullscreen like button clicked!');
+                if (typeof window.toggleLikeSong === 'function') {
+                    window.toggleLikeSong();
+                }
+            });
+        }
     }
 
     // Toggle fullscreen player
@@ -292,6 +560,11 @@
         }
         if (mobileArtist && fullscreenArtist) {
             fullscreenArtist.textContent = mobileArtist.textContent;
+            // Copiar el artist_id también
+            const artistId = mobileArtist.getAttribute('data-artist-id');
+            if (artistId) {
+                fullscreenArtist.setAttribute('data-artist-id', artistId);
+            }
             console.log('✅ Artist updated:', mobileArtist.textContent);
         }
     }
@@ -363,6 +636,10 @@
         }
         if (mobileArtist && song.artist_name) {
             mobileArtist.textContent = song.artist_name;
+            // Guardar el artist_id en el atributo data
+            if (song.artist_id) {
+                mobileArtist.setAttribute('data-artist-id', song.artist_id);
+            }
         }
 
         // También actualizar fullscreen si está abierto
