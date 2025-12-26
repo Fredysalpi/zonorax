@@ -1,0 +1,9 @@
+/* ===== AJUSTE DE DJS GRID PARA MOBILE ===== */
+
+@media (max-width: 768px) {
+    .djs-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 10px !important;
+        padding: 2px !important;
+    }
+}

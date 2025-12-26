@@ -149,6 +149,68 @@
         }
     }
 
+    // Función global para sincronizar canción actual al móvil
+    window.syncCurrentSongToMobile = function () {
+        console.log('🔄 Sincronizando canción actual a móvil...');
+
+        // Usar window.currentPlaylist y window.currentSongIndex
+        if (window.currentPlaylist && window.currentPlaylist.length > 0 && window.currentSongIndex !== undefined) {
+            const song = window.currentPlaylist[window.currentSongIndex];
+
+            if (song) {
+                const mobileCover = document.getElementById('mobile-song-cover');
+                const mobileTitle = document.getElementById('mobile-song-title');
+                const mobileArtist = document.getElementById('mobile-song-artist');
+
+                if (mobileCover && mobileTitle && mobileArtist) {
+                    mobileCover.src = song.cover_image || '/images/placeholder-cover.jpg';
+                    mobileTitle.textContent = song.title;
+                    mobileArtist.innerHTML = getFullArtistName(song, window.allArtists || []);
+
+                    if (song.artist_id) {
+                        mobileArtist.setAttribute('data-artist-id', song.artist_id);
+                    }
+
+                    // Actualizar también el fullscreen player
+                    const fullscreenCover = document.getElementById('fullscreen-cover');
+                    const fullscreenTitle = document.getElementById('fullscreen-song-title');
+                    const fullscreenArtist = document.getElementById('fullscreen-artist');
+                    const fullscreenBackground = document.getElementById('fullscreen-background');
+
+                    if (fullscreenCover) {
+                        fullscreenCover.src = song.cover_image || '/images/placeholder-cover.jpg';
+                    }
+
+                    if (fullscreenTitle) {
+                        const marqueeSpan = fullscreenTitle.querySelector('.marquee-text');
+                        if (marqueeSpan) {
+                            marqueeSpan.textContent = song.title;
+                        }
+                    }
+
+                    if (fullscreenArtist) {
+                        fullscreenArtist.innerHTML = getFullArtistName(song, window.allArtists || []);
+                        if (song.artist_id) {
+                            fullscreenArtist.setAttribute('data-artist-id', song.artist_id);
+                        }
+                    }
+
+                    // Actualizar el fondo difuminado con la portada
+                    if (fullscreenBackground) {
+                        fullscreenBackground.style.backgroundImage = `url("${song.cover_image || '/images/placeholder-cover.jpg'}")`;
+                        console.log('✅ Fondo fullscreen actualizado con portada');
+                    }
+
+                    console.log('✅ Canción sincronizada desde currentPlaylist:', song.title);
+                    return true;
+                }
+            }
+        }
+
+        console.warn('⚠️ No se pudo sincronizar: no hay canción actual');
+        return false;
+    }
+
     // Crear player fullscreen
     function createFullscreenPlayer() {
         console.log('🎬 createFullscreenPlayer called');
@@ -179,6 +241,21 @@
                 color: #ffffff;
                 overflow: hidden;
             ">
+                <!-- Fondo difuminado con la portada -->
+                <div id="fullscreen-background" style="
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background-size: cover;
+                    background-position: center;
+                    filter: blur(50px);
+                    opacity: 0.6;
+                    z-index: 0;
+                    transform: scale(1.1);
+                "></div>
+            
                 <!-- Header -->
                 <div class="player-fullscreen-header" style="
                     display: flex;
@@ -186,6 +263,8 @@
                     align-items: center;
                     padding: 16px;
                     flex-shrink: 0;
+                    position: relative;
+                    z-index: 1;
                 ">
                     <button onclick="closeFullscreenPlayer()" style="
                         background: none;
@@ -222,32 +301,51 @@
                     </button>
                 </div>
 
-                <!-- Cover con botones + y ❤️ -->
+                <!-- Cover -->
                 <div style="
                     flex: 1;
                     display: flex;
-                    flex-direction: column;
-                    justify-content: center;
                     align-items: center;
-                    padding: 0 24px;
-                    min-height: 0;
+                    justify-content: center;
+                    padding: 20px 24px;
+                    min-height: min(75vw, 380px);
+                    position: relative;
+                    z-index: 1;
                 ">
                     <img class="player-fullscreen-cover" id="fullscreen-cover" src="/images/default-cover.png" alt="Cover" style="
-                        width: min(85vw, 400px);
-                        height: min(85vw, 400px);
+                        width: min(75vw, 380px);
+                        height: min(75vw, 380px);
                         border-radius: 8px;
                         object-fit: cover;
                         box-shadow: 0 8px 24px rgba(0,0,0,0.5);
-                        margin-bottom: 20px;
+                        display: block;
                     ">
+                </div>
+
+                <!-- Info de la canción con botones -->
+                <div class="player-fullscreen-info" style="
+                    padding: 0 24px 16px;
+                    flex-shrink: 0;
+                    position: relative;
+                    z-index: 1;
+                ">
+                    <div class="player-fullscreen-song-title marquee-container" id="fullscreen-song-title" style="
+                        font-size: 22px;
+                        font-weight: 700;
+                        color: #ffffff;
+                        margin-bottom: 12px;
+                        text-align: center;
+                        padding: 0 16px;
+                    ">
+                        <span class="marquee-text">Selecciona una canción</span>
+                    </div>
                     
-                    <!-- Botones + y ❤️ debajo de la portada -->
+                    <!-- Artista con botones -->
                     <div style="
                         display: flex;
-                        justify-content: space-between;
                         align-items: center;
-                        width: min(85vw, 400px);
-                        margin-bottom: 16px;
+                        justify-content: center;
+                        gap: 16px;
                     ">
                         <button id="fullscreen-like-btn" style="
                             background: none;
@@ -259,11 +357,26 @@
                             align-items: center;
                             justify-content: center;
                             transition: color 0.2s;
+                            flex-shrink: 0;
                         " title="Me gusta">
-                            <svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor">
+                            <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
                                 <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
                             </svg>
                         </button>
+                        
+                        <div class="player-fullscreen-artist" id="fullscreen-artist" data-artist-id=""
+                             style="
+                                font-size: 16px;
+                                color: #b3b3b3;
+                                transition: color 0.2s;
+                                white-space: normal;
+                                word-wrap: break-word;
+                                flex: 1;
+                                min-width: 0;
+                                text-align: center;
+                                line-height: 1.4;
+                                max-width: 100%;
+                             ">Artista</div>
                         
                         <button id="fullscreen-add-to-playlist-btn" style="
                             background: none;
@@ -275,47 +388,21 @@
                             align-items: center;
                             justify-content: center;
                             transition: color 0.2s;
+                            flex-shrink: 0;
                         " title="Agregar a playlist">
-                            <svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor">
+                            <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
                                 <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
                             </svg>
                         </button>
                     </div>
                 </div>
 
-                <!-- Info de la canción -->
-                <div class="player-fullscreen-info" style="
-                    padding: 0 24px 16px;
-                    text-align: center;
-                    flex-shrink: 0;
-                ">
-                    <div class="player-fullscreen-song-title" id="fullscreen-song-title" style="
-                        font-size: 20px;
-                        font-weight: 700;
-                        color: #ffffff;
-                        margin-bottom: 8px;
-                        white-space: nowrap;
-                        overflow: hidden;
-                        text-overflow: ellipsis;
-                    ">Selecciona una canción</div>
-                    <div class="player-fullscreen-artist" id="fullscreen-artist" data-artist-id=""
-                         style="
-                            font-size: 16px;
-                            color: #b3b3b3;
-                            cursor: pointer;
-                            transition: color 0.2s;
-                            white-space: nowrap;
-                            overflow: hidden;
-                            text-overflow: ellipsis;
-                         "
-                         onmouseover="this.style.color='#1db954'" 
-                         onmouseout="this.style.color='#b3b3b3'">Artista</div>
-                </div>
-
                 <!-- Barra de progreso -->
                 <div class="player-fullscreen-progress" style="
                     padding: 0 24px 20px;
                     flex-shrink: 0;
+                    position: relative;
+                    z-index: 1;
                 ">
                     <div class="player-fullscreen-progress-bar" onclick="seekFullscreen(event)" style="
                         width: 100%;
@@ -353,6 +440,8 @@
                     gap: 12px;
                     padding: 0 24px 24px;
                     flex-shrink: 0;
+                    position: relative;
+                    z-index: 1;
                 ">
                     <button id="fullscreen-shuffle-btn" onclick="toggleShuffle()" style="
                         background: none;
@@ -443,6 +532,9 @@
         console.log('📏 Element styles:', created ? window.getComputedStyle(created).display : 'N/A');
 
         // Event listener para el nombre del artista en el fullscreen player
+        // NOTA: Ahora cada artista individual tiene su propio onclick en el HTML generado por getFullArtistName
+        // por lo que no necesitamos este listener en el contenedor
+        /*
         const fullscreenArtist = document.getElementById('fullscreen-artist');
         if (fullscreenArtist) {
             fullscreenArtist.addEventListener('click', function (e) {
@@ -454,6 +546,7 @@
                 }
             });
         }
+        */
 
         // Event listener para el botón de agregar a playlist en fullscreen
         const fullscreenAddBtn = document.getElementById('fullscreen-add-to-playlist-btn');
@@ -511,9 +604,6 @@
                 fullscreen.style.right = '0';
                 fullscreen.style.bottom = '0';
                 fullscreen.style.zIndex = '9999';
-                fullscreen.style.background = 'linear-gradient(180deg, #1e3a5f 0%, #121212 100%)';
-                fullscreen.style.padding = '20px';
-                fullscreen.style.overflowY = 'auto';
 
                 console.log('✅ Fullscreen opened');
                 console.log('📏 Display after open:', window.getComputedStyle(fullscreen).display);
@@ -549,17 +639,42 @@
         const fullscreenCover = document.getElementById('fullscreen-cover');
         const fullscreenTitle = document.getElementById('fullscreen-song-title');
         const fullscreenArtist = document.getElementById('fullscreen-artist');
+        const fullscreenBackground = document.getElementById('fullscreen-background');
+
+        console.log('🖼️ Fullscreen background element:', fullscreenBackground);
 
         if (mobileCover && fullscreenCover) {
             fullscreenCover.src = mobileCover.src;
             console.log('✅ Cover updated:', mobileCover.src);
+
+            // Actualizar el fondo difuminado con la misma imagen
+            if (fullscreenBackground) {
+                fullscreenBackground.style.backgroundImage = `url("${mobileCover.src}")`;
+                console.log('✅ Background updated with blurred cover:', mobileCover.src);
+            } else {
+                console.warn('⚠️ Fullscreen background element not found!');
+            }
         }
         if (mobileTitle && fullscreenTitle) {
-            fullscreenTitle.textContent = mobileTitle.textContent;
+            const marqueeSpan = fullscreenTitle.querySelector('.marquee-text');
+            if (marqueeSpan) {
+                marqueeSpan.textContent = mobileTitle.textContent;
+
+                // Verificar si el texto es más largo que el contenedor
+                setTimeout(() => {
+                    if (marqueeSpan.scrollWidth > fullscreenTitle.clientWidth) {
+                        marqueeSpan.classList.add('should-animate');
+                        // Duplicar el texto para efecto continuo
+                        marqueeSpan.textContent = mobileTitle.textContent + '  •  ' + mobileTitle.textContent;
+                    } else {
+                        marqueeSpan.classList.remove('should-animate');
+                    }
+                }, 100);
+            }
             console.log('✅ Title updated:', mobileTitle.textContent);
         }
         if (mobileArtist && fullscreenArtist) {
-            fullscreenArtist.textContent = mobileArtist.textContent;
+            fullscreenArtist.innerHTML = mobileArtist.innerHTML;
             // Copiar el artist_id también
             const artistId = mobileArtist.getAttribute('data-artist-id');
             if (artistId) {
@@ -633,19 +748,64 @@
         }
         if (mobileTitle && song.title) {
             mobileTitle.textContent = song.title;
+
+            // Aplicar marquesina si el texto es muy largo
+            setTimeout(() => {
+                if (mobileTitle.scrollWidth > mobileTitle.clientWidth) {
+                    mobileTitle.classList.add('marquee-container');
+                    const span = document.createElement('span');
+                    span.className = 'marquee-text should-animate';
+                    span.textContent = song.title + '  •  ' + song.title;
+                    mobileTitle.textContent = '';
+                    mobileTitle.appendChild(span);
+                }
+            }, 100);
         }
         if (mobileArtist && song.artist_name) {
-            mobileArtist.textContent = song.artist_name;
+            mobileArtist.innerHTML = getFullArtistName(song, window.allArtists || []);
             // Guardar el artist_id en el atributo data
             if (song.artist_id) {
                 mobileArtist.setAttribute('data-artist-id', song.artist_id);
             }
         }
 
-        // También actualizar fullscreen si está abierto
-        const fullscreen = document.getElementById('player-fullscreen');
-        if (fullscreen && fullscreen.classList.contains('active')) {
-            updateFullscreenPlayerInfo();
+        // Actualizar fullscreen player (esté abierto o no, para que esté listo)
+        const fullscreenCover = document.getElementById('fullscreen-cover');
+        const fullscreenTitle = document.getElementById('fullscreen-song-title');
+        const fullscreenArtist = document.getElementById('fullscreen-artist');
+        const fullscreenBackground = document.getElementById('fullscreen-background');
+
+        if (fullscreenCover && song.cover_image) {
+            fullscreenCover.src = song.cover_image;
+
+            // Actualizar el fondo difuminado
+            if (fullscreenBackground) {
+                fullscreenBackground.style.backgroundImage = `url(${song.cover_image})`;
+            }
+        }
+        if (fullscreenTitle && song.title) {
+            const marqueeSpan = fullscreenTitle.querySelector('.marquee-text');
+            if (marqueeSpan) {
+                marqueeSpan.textContent = song.title;
+
+                // Verificar si el texto es más largo que el contenedor
+                setTimeout(() => {
+                    if (marqueeSpan.scrollWidth > fullscreenTitle.clientWidth) {
+                        marqueeSpan.classList.add('should-animate');
+                        // Duplicar el texto para efecto continuo
+                        marqueeSpan.textContent = song.title + '  •  ' + song.title;
+                    } else {
+                        marqueeSpan.classList.remove('should-animate');
+                        marqueeSpan.textContent = song.title;
+                    }
+                }, 100);
+            }
+        }
+        if (fullscreenArtist && song.artist_name) {
+            fullscreenArtist.innerHTML = getFullArtistName(song, window.allArtists || []);
+            if (song.artist_id) {
+                fullscreenArtist.setAttribute('data-artist-id', song.artist_id);
+            }
         }
     };
 
@@ -675,10 +835,11 @@
     }
 
     function init() {
-        if (!isMobileDevice()) return;
-
-        createMobilePlayer();
-        createFullscreenPlayer();
+        // Inicializar si estamos en móvil
+        if (isMobileDevice()) {
+            createMobilePlayer();
+            createFullscreenPlayer();
+        }
 
         // Actualizar progreso cada 100ms
         const audio = document.getElementById('audio-player');
@@ -686,14 +847,85 @@
             audio.addEventListener('timeupdate', updateMobileProgress);
         }
 
-        // Actualizar en resize
+        // Actualizar en resize - SIEMPRE escuchar, no solo en móvil
+        let wasMobile = isMobileDevice();
         window.addEventListener('resize', function () {
-            if (isMobileDevice()) {
-                createMobilePlayer();
+            const isMobile = isMobileDevice();
+
+            // Si cambiamos de desktop a móvil
+            if (!wasMobile && isMobile) {
+                console.log('📱 Cambiando a modo móvil');
+
+                // Crear mini player si no existe
+                if (!document.getElementById('mobile-player-mini')) {
+                    createMobilePlayer();
+                }
+
+                // Crear fullscreen player si no existe
+                if (!document.querySelector('.player-fullscreen')) {
+                    createFullscreenPlayer();
+                }
+
+                // Sincronizar usando la función global con delay
+                setTimeout(() => {
+                    if (typeof window.syncCurrentSongToMobile === 'function') {
+                        window.syncCurrentSongToMobile();
+                    }
+                }, 300);
+            }
+            // Si cambiamos de móvil a desktop
+            else if (wasMobile && !isMobile) {
+                console.log('💻 Cambiando a modo desktop');
+
+                // Ocultar completamente el mini player móvil
+                const mobilePlayerMini = document.getElementById('mobile-player-mini');
+                if (mobilePlayerMini) {
+                    mobilePlayerMini.remove(); // Eliminar completamente
+                    console.log('✅ Mini player móvil eliminado');
+                }
+
+                // Ocultar la barra de navegación móvil
+                const mobileNav = document.querySelector('.mobile-nav');
+                if (mobileNav) {
+                    mobileNav.remove(); // Eliminar completamente
+                    console.log('✅ Navegación móvil eliminada');
+                }
+
+                // FORZAR que el reproductor desktop se muestre
+                const playerBar = document.querySelector('.player-bar');
+                if (playerBar) {
+                    // Mostrar la barra del player
+                    playerBar.style.display = 'grid';
+
+                    // Mostrar los elementos internos del player
+                    const playerLeft = playerBar.querySelector('.player-left');
+                    const playerCenter = playerBar.querySelector('.player-center');
+                    const playerRight = playerBar.querySelector('.player-right');
+
+                    if (playerLeft) playerLeft.style.display = 'flex';
+                    if (playerCenter) playerCenter.style.display = 'flex';
+                    if (playerRight) playerRight.style.display = 'flex';
+
+                    console.log('✅ Reproductor desktop restaurado');
+                }
+            }
+            // Si seguimos en móvil, asegurar que existan los elementos
+            else if (isMobile) {
+                if (!document.getElementById('mobile-player-mini')) {
+                    createMobilePlayer();
+                    // Sincronizar después de crear
+                    setTimeout(() => {
+                        if (typeof window.syncCurrentSongToMobile === 'function') {
+                            window.syncCurrentSongToMobile();
+                        }
+                    }, 100);
+                }
                 if (!document.querySelector('.player-fullscreen')) {
                     createFullscreenPlayer();
                 }
             }
+
+            wasMobile = isMobile;
         });
     }
 
@@ -1368,5 +1600,68 @@
             alert('Error al eliminar la canción');
         }
     };
+
+    // ===== FUNCIONALIDAD DE ARRASTRE PARA BARRA DE PROGRESO FULLSCREEN =====
+
+    // Hacer la barra de progreso fullscreen arrastrable
+    const fullscreenProgressBar = document.getElementById('fullscreen-progress-bar');
+    if (fullscreenProgressBar) {
+        let isDragging = false;
+
+        function updateProgress(e) {
+            const rect = fullscreenProgressBar.getBoundingClientRect();
+            const percent = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+
+            const audio = document.getElementById('audio-player');
+            if (audio && audio.duration) {
+                audio.currentTime = percent * audio.duration;
+            }
+        }
+
+        function startDrag(e) {
+            isDragging = true;
+            updateProgress(e);
+            e.preventDefault();
+        }
+
+        function drag(e) {
+            if (isDragging) {
+                updateProgress(e);
+            }
+        }
+
+        function stopDrag() {
+            isDragging = false;
+        }
+
+        fullscreenProgressBar.addEventListener('mousedown', startDrag);
+        fullscreenProgressBar.addEventListener('touchstart', (e) => {
+            isDragging = true;
+            const touch = e.touches[0];
+            const rect = fullscreenProgressBar.getBoundingClientRect();
+            const percent = Math.max(0, Math.min(1, (touch.clientX - rect.left) / rect.width));
+            const audio = document.getElementById('audio-player');
+            if (audio && audio.duration) {
+                audio.currentTime = percent * audio.duration;
+            }
+            e.preventDefault();
+        });
+
+        document.addEventListener('mousemove', drag);
+        document.addEventListener('touchmove', (e) => {
+            if (isDragging) {
+                const touch = e.touches[0];
+                const rect = fullscreenProgressBar.getBoundingClientRect();
+                const percent = Math.max(0, Math.min(1, (touch.clientX - rect.left) / rect.width));
+                const audio = document.getElementById('audio-player');
+                if (audio && audio.duration) {
+                    audio.currentTime = percent * audio.duration;
+                }
+            }
+        });
+
+        document.addEventListener('mouseup', stopDrag);
+        document.addEventListener('touchend', stopDrag);
+    }
 
 })();

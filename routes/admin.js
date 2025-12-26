@@ -348,13 +348,23 @@ router.post('/songs', uploadSong.fields([
 ]), async (req, res) => {
     try {
         console.log('🎵 Subiendo canción a R2...');
-        const { title, artist_id, album_id, duration, genre, bpm, key_signature } = req.body;
+        const { title, artist_id, album_id, duration, genre, bpm, key_signature, ft_artists } = req.body;
 
         if (!req.files['audio']) {
             return res.status(400).json({ error: 'Archivo de audio requerido' });
         }
 
-        // Obtener nombre del artista
+        // Parsear ft_artists si existe
+        let ftArtistsJson = null;
+        if (ft_artists) {
+            try {
+                ftArtistsJson = ft_artists; // Ya viene como string JSON desde el frontend
+            } catch (error) {
+                console.error('Error parseando ft_artists:', error);
+            }
+        }
+
+        // Obtener nombre del artista principal
         const [artists] = await db.query('SELECT name FROM artists WHERE id = ?', [artist_id]);
         const artistName = artists.length > 0 ? artists[0].name : 'unknown';
 
@@ -400,23 +410,24 @@ router.post('/songs', uploadSong.fields([
             console.log('✅ Cover subido:', coverUrl);
         }
 
-        // Crear canción en BD
+        // Crear canción en BD (con el artista principal y ft_artists)
         const [result] = await db.query(
-            'INSERT INTO songs (title, artist_id, album_id, duration, file_url, file_format, file_size, r2_key, cover_image, genre, bpm, key_signature) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [title, artist_id, album_id, duration, audioUrl, fileExt.slice(1), audioFile.size, audioKey, coverUrl, genre, bpm, key_signature]
+            'INSERT INTO songs (title, artist_id, album_id, duration, file_url, file_format, file_size, r2_key, cover_image, genre, bpm, key_signature, ft_artists) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [title, artist_id, album_id, duration, audioUrl, fileExt.slice(1), audioFile.size, audioKey, coverUrl, genre, bpm, key_signature, ftArtistsJson]
         );
+
+        const songId = result.insertId;
+        console.log(`✅ Canción creada con ID: ${songId}`, ftArtistsJson ? `con artistas colaboradores: ${ftArtistsJson}` : '');
 
         // Registrar upload
         await db.query(
             'INSERT INTO uploads (user_id, file_name, file_type, file_format, file_size, r2_key, r2_url, entity_type, entity_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [req.user.id, fileName, 'audio', fileExt.slice(1), audioFile.size, audioKey, audioUrl, 'song', result.insertId]
+            [req.user.id, fileName, 'audio', fileExt.slice(1), audioFile.size, audioKey, audioUrl, 'song', songId]
         );
-
-        console.log('✅ Canción creada con ID:', result.insertId);
 
         res.status(201).json({
             message: 'Canción creada exitosamente',
-            songId: result.insertId,
+            songId: songId,
             audioUrl: audioUrl,
             fileName: fileName
         });
@@ -432,12 +443,22 @@ router.put('/songs/:id', uploadSong.fields([
     { name: 'cover', maxCount: 1 }
 ]), async (req, res) => {
     try {
-        const { title, artist_id, album_id, duration, genre, bpm, key_signature } = req.body;
+        const { title, artist_id, album_id, duration, genre, bpm, key_signature, ft_artists } = req.body;
         const songId = req.params.id;
+
+        console.log('🎵 Actualizando canción:', songId);
+        console.log('📝 artist_id recibido:', artist_id);
+        console.log('📝 ft_artists recibido:', ft_artists);
 
         const [songs] = await db.query('SELECT * FROM songs WHERE id = ?', [songId]);
         if (songs.length === 0) {
             return res.status(404).json({ error: 'Canción no encontrada' });
+        }
+
+        // Parsear ft_artists si existe
+        let ftArtistsJson = null;
+        if (ft_artists) {
+            ftArtistsJson = ft_artists; // Ya viene como string JSON desde el frontend
         }
 
         let audioUrl = songs[0].file_url;
@@ -448,7 +469,7 @@ router.put('/songs/:id', uploadSong.fields([
 
         // Actualizar audio si se proporciona
         if (req.files['audio']) {
-            // Obtener nombre del artista
+            // Obtener nombre del artista principal
             const [artists] = await db.query('SELECT name FROM artists WHERE id = ?', [artist_id]);
             const artistName = artists.length > 0 ? artists[0].name : 'unknown';
 
@@ -496,12 +517,17 @@ router.put('/songs/:id', uploadSong.fields([
             coverUrl = `${process.env.R2_PUBLIC_URL}/${coverKey}`;
         }
 
+        // Actualizar canción en BD (con el artista principal y ft_artists)
         await db.query(
-            'UPDATE songs SET title = ?, artist_id = ?, album_id = ?, duration = ?, file_url = ?, file_format = ?, file_size = ?, r2_key = ?, cover_image = ?, genre = ?, bpm = ?, key_signature = ? WHERE id = ?',
-            [title, artist_id, album_id, duration, audioUrl, fileFormat, fileSize, audioKey, coverUrl, genre, bpm, key_signature, songId]
+            'UPDATE songs SET title = ?, artist_id = ?, album_id = ?, duration = ?, file_url = ?, file_format = ?, file_size = ?, r2_key = ?, cover_image = ?, genre = ?, bpm = ?, key_signature = ?, ft_artists = ? WHERE id = ?',
+            [title, artist_id, album_id, duration, audioUrl, fileFormat, fileSize, audioKey, coverUrl, genre, bpm, key_signature, ftArtistsJson, songId]
         );
 
-        res.json({ message: 'Canción actualizada exitosamente' });
+        console.log(`✅ Canción ${songId} actualizada`, ftArtistsJson ? `con artistas colaboradores: ${ftArtistsJson}` : '');
+
+        res.json({
+            message: 'Canción actualizada exitosamente'
+        });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

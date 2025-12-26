@@ -1,0 +1,62 @@
+/* ===== AJUSTES DE LAYOUT PARA DESKTOP ===== */
+/* Solo se aplica en pantallas mayores a 768px */
+
+@media (min-width: 769px) {
+
+    /* 1. Reducir ancho de sidebars */
+    :root {
+        --sidebar-width: 220px;
+        --sidebar-right-width: 280px;
+    }
+
+    /* 2. Scroll invisible en sidebar derecho */
+    .sidebar-right::-webkit-scrollbar {
+        display: none;
+    }
+
+    .sidebar-right {
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+    }
+
+    /* 3. Lanzamientos en 4 columnas */
+    .releases-grid {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
+    }
+
+    /* 4. Ocultar el segundo nav-item (Buscar) */
+    .main-nav .nav-item:nth-child(2) {
+        display: none !important;
+    }
+
+    /* 5. Ocultar el botón de flecha < en biblioteca */
+    .library-header .icon-btn:last-child {
+        display: none !important;
+    }
+
+    /* 6. Reducir tamaño de playlists en sidebar */
+    .playlist-item {
+        padding: 6px !important;
+        gap: 8px !important;
+    }
+
+    .playlist-cover {
+        width: 40px !important;
+        height: 40px !important;
+    }
+
+    .playlist-name {
+        font-size: 13px !important;
+        margin-bottom: 2px !important;
+    }
+
+    .playlist-meta {
+        font-size: 11px !important;
+    }
+
+    .playlist-meta svg {
+        width: 14px !important;
+        height: 14px !important;
+    }
+}

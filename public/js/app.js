@@ -1,11 +1,12 @@
-﻿// ===== CONFIGURACIÃ“N Y ESTADO GLOBAL =====
+// ===== CONFIGURACIÓN Y ESTADO GLOBAL =====
 const API_BASE_URL = '/api';
-let currentPlaylist = [];
-let currentSongIndex = 0;
+window.currentPlaylist = [];
+window.currentSongIndex = 0;
 let isPlaying = false;
 let currentVolume = 0.8;
 let isShuffle = false;
 let repeatMode = 'off';
+let allArtists = []; // Lista global de artistas para mostrar colaboradores
 
 // ===== FUNCIONES AUXILIARES =====
 function formatTime(seconds) {
@@ -43,13 +44,69 @@ function debounce(func, wait) {
     };
 }
 
+// Función para obtener el nombre completo del artista con colaboradores (HTML con enlaces)
+function getFullArtistName(song, allArtists = [], asHTML = true) {
+    let artistText = song.artist_name || 'Artista Desconocido';
+    let artistHTML = '';
 
-// ===== HISTORIAL DE NAVEGACIÃ“N =====
+    // Crear enlace para el artista principal
+    if (asHTML && song.artist_id) {
+        artistHTML = `<span onclick="event.stopPropagation(); if(typeof closeFullscreenPlayer === 'function') closeFullscreenPlayer(); window.showArtistPage(${song.artist_id});" style="cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='#1db954'" onmouseout="this.style.color=''">${artistText}</span>`;
+    } else {
+        artistHTML = artistText;
+    }
+
+    // Si hay artistas colaboradores (ft_artists)
+    if (song.ft_artists) {
+        try {
+            let ftArtistIds = [];
+
+            // Parsear ft_artists (puede venir como string JSON o array)
+            if (typeof song.ft_artists === 'string') {
+                ftArtistIds = JSON.parse(song.ft_artists);
+            } else if (Array.isArray(song.ft_artists)) {
+                ftArtistIds = song.ft_artists;
+            }
+
+            // Si hay IDs de colaboradores
+            if (ftArtistIds && ftArtistIds.length > 0) {
+                const ftArtistElements = [];
+
+                // Buscar los nombres de los artistas colaboradores
+                ftArtistIds.forEach(id => {
+                    const artist = allArtists.find(a => a.id.toString() === id.toString());
+                    if (artist) {
+                        if (asHTML) {
+                            // Crear enlace clickeable para cada colaborador
+                            ftArtistElements.push(
+                                `<span onclick="event.stopPropagation(); if(typeof closeFullscreenPlayer === 'function') closeFullscreenPlayer(); window.showArtistPage(${artist.id});" style="cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='#1db954'" onmouseout="this.style.color=''">${artist.name}</span>`
+                            );
+                        } else {
+                            ftArtistElements.push(artist.name);
+                        }
+                    }
+                });
+
+                // Si encontramos nombres, agregarlos con "ft."
+                if (ftArtistElements.length > 0) {
+                    artistHTML += ' ft. ' + ftArtistElements.join(', ');
+                }
+            }
+        } catch (error) {
+            console.error('Error parseando ft_artists:', error);
+        }
+    }
+
+    return artistHTML;
+}
+
+
+// ===== HISTORIAL DE NAVEGACIÓN =====
 let navigationHistory = [];
 let navigationIndex = -1;
 let isNavigating = false;
 
-// ===== FUNCIÓN PARA VOLVER A LA PÁGINA PRINCIPAL =====
+// ===== FUNCI�N PARA VOLVER A LA P�GINA PRINCIPAL =====
 function goHome() {
     const contentWrapper = document.querySelector('.content-wrapper');
 
@@ -57,7 +114,7 @@ function goHome() {
         <section class="djs-section">
             <h2 style="font-size: 24px; font-weight: 700; margin-bottom: 24px; color: var(--text-base);">DJs Destacados</h2>
             <div class="djs-grid" id="djs-grid">
-                <!-- DJs se cargarán aquí -->
+                <!-- DJs se cargar�n aqu� -->
             </div>
         </section>
 
@@ -67,7 +124,7 @@ function goHome() {
                 <a href="#" class="show-all">Mostrar todo</a>
             </div>
             <div class="releases-grid" id="releases-grid">
-                <!-- Lanzamientos se cargarán aquí -->
+                <!-- Lanzamientos se cargar�n aqu� -->
             </div>
         </section>
     `;
@@ -83,7 +140,7 @@ function goHome() {
     }
 }
 
-// ===== FUNCIONES DE NAVEGACIÓN (ATRÁS/ADELANTE) =====
+// ===== FUNCIONES DE NAVEGACI�N (ATR�S/ADELANTE) =====
 function navigateBack() {
     if (navigationIndex > 0) {
         isNavigating = true;
@@ -188,7 +245,7 @@ const playerCover = document.getElementById('player-cover');
 const playerSongTitle = document.getElementById('player-song-title');
 const playerArtist = document.getElementById('player-artist');
 
-// ===== INICIALIZACIÃ“N =====
+// ===== INICIALIZACIÓN =====
 document.addEventListener('DOMContentLoaded', async () => {
     await loadPlaylists();
     await loadFeaturedPlaylists();
@@ -201,7 +258,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     setupCreatePlaylist();
     // setupLikeButton eliminado
 
-    // Cargar la última canción reproducida
+    // Cargar la �ltima canci�n reproducida
     loadLastPlayedSong();
 
     setTimeout(() => {
@@ -210,7 +267,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 // ===== CARGA DE DATOS =====
-// Función para obtener el user_id del usuario actual
+// Funci�n para obtener el user_id del usuario actual
 function getCurrentUserId() {
     const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
     return currentUser.id || null;
@@ -218,12 +275,23 @@ function getCurrentUserId() {
 
 async function loadPlaylists() {
     try {
+        // Verificar si el usuario est� autenticado
+        const authToken = localStorage.getItem('authToken');
+        if (!authToken) {
+            // Si no est� logueado, no mostrar playlists
+            const container = document.getElementById('playlists-container');
+            if (container) {
+                container.innerHTML = '';
+            }
+            return;
+        }
+
         const userId = getCurrentUserId();
         const url = userId ? `${API_BASE_URL}/playlists?user_id=${userId}` : `${API_BASE_URL}/playlists`;
         const response = await fetch(url);
         const playlists = await response.json();
 
-        // Ordenar: "Me Gusta" primero, luego las demás por fecha de creación
+        // Ordenar: "Me Gusta" primero, luego las dem�s por fecha de creaci�n
         playlists.sort((a, b) => {
             if (a.name === 'Me Gusta') return -1;
             if (b.name === 'Me Gusta') return 1;
@@ -245,7 +313,7 @@ async function loadPlaylists() {
                     <div class="playlist-name">${playlist.name}</div>
                     <div class="playlist-meta">
                         ${playlist.is_public ? '<svg viewBox="0 0 16 16"><path d="M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13z" fill="currentColor"/></svg>' : ''}
-                        Playlist • ${playlist.song_count || 0} canciones
+                        Playlist - ${playlist.song_count || 0} canciones
                     </div>
                 </div>
             </div>
@@ -314,8 +382,8 @@ function showCreatePlaylistModal() {
             </div>
             
             <div style="margin-bottom: 24px;">
-                <label style="display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px; color: var(--text-base);">Descripción (opcional)</label>
-                <textarea id="playlist-description-input" placeholder="Agrega una descripción" style="
+                <label style="display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px; color: var(--text-base);">Descripci�n (opcional)</label>
+                <textarea id="playlist-description-input" placeholder="Agrega una descripci�n" style="
                     width: 100%;
                     padding: 12px;
                     background: var(--bg-base);
@@ -331,7 +399,7 @@ function showCreatePlaylistModal() {
             <div style="margin-bottom: 24px;">
                 <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
                     <input type="checkbox" id="playlist-public-checkbox" style="width: 16px; height: 16px; cursor: pointer;">
-                    <span style="font-size: 14px; color: var(--text-base);">Hacer pública(Todos los usuarios podran ver tu Playlist)</span>
+                    <span style="font-size: 14px; color: var(--text-base);">Hacer p�blica(Todos los usuarios podran ver tu Playlist)</span>
                 </label>
             </div>
             
@@ -409,7 +477,7 @@ async function createPlaylist() {
         const userId = getCurrentUserId();
 
         if (!userId) {
-            alert('Debes iniciar sesión para crear una playlist');
+            alert('Debes iniciar sesi�n para crear una playlist');
             return;
         }
 
@@ -437,8 +505,8 @@ async function createPlaylist() {
         // Recargar playlists
         await loadPlaylists();
 
-        // Mostrar mensaje de éxito
-        alert(`✅ Playlist "${name}" creada exitosamente`);
+        // Mostrar mensaje de �xito
+        alert(`? Playlist "${name}" creada exitosamente`);
 
         // Abrir la nueva playlist
         if (newPlaylist.id) {
@@ -446,7 +514,7 @@ async function createPlaylist() {
         }
     } catch (error) {
         console.error('Error creating playlist:', error);
-        alert('❌ Error al crear la playlist: ' + error.message);
+        alert('? Error al crear la playlist: ' + error.message);
     }
 }
 
@@ -473,7 +541,7 @@ async function loadFeaturedPlaylists() {
                     </button>
                 </div>
                 <div class="featured-card-title">${playlist.name}</div>
-                <div class="featured-card-subtitle">${playlist.description || `Playlist â€¢ ${playlist.song_count || 0} canciones`}</div>
+                <div class="featured-card-subtitle">${playlist.description || `Playlist • ${playlist.song_count || 0} canciones`}</div>
             </div>
         `).join('');
 
@@ -506,6 +574,14 @@ async function loadReleases() {
         const container = document.getElementById('releases-grid');
         const releases = songs.slice(0, 5);
 
+        // Funci�n para truncar texto
+        const truncateText = (text, maxLength = 11) => {
+            if (text.length > maxLength) {
+                return text.substring(0, maxLength) + '...';
+            }
+            return text;
+        };
+
         container.innerHTML = releases.map((song, index) => `
             <div class="release-card" data-song-index="${index}">
                 ${index === 0 ? '<div class="release-badge">HOT NOW!</div>' : ''}
@@ -517,12 +593,12 @@ async function loadReleases() {
                         </svg>
                     </button>
                 </div>
-                <div class="featured-card-title">${song.title}</div>
-                <div class="featured-card-subtitle" onclick="event.stopPropagation(); window.showArtistPage(${song.artist_id});" style="cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='#1db954'" onmouseout="this.style.color=''">${song.artist_name || 'Artista Desconocido'}</div>
+                <div class="featured-card-title" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; display: block;">${truncateText(song.title)}</div>
+                <div class="featured-card-subtitle" onclick="event.stopPropagation(); window.showArtistPage(${song.artist_id});" style="cursor: pointer; transition: color 0.2s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; display: block;" onmouseover="this.style.color='#1db954'" onmouseout="this.style.color=''">${truncateText(song.artist_name || 'Artista Desconocido')}</div>
             </div>
         `).join('');
 
-        currentPlaylist = releases;
+        window.currentPlaylist = releases;
 
         document.querySelectorAll('.release-card').forEach(card => {
             const playBtn = card.querySelector('.play-button');
@@ -542,8 +618,48 @@ async function loadDJs() {
         const response = await fetch(`${API_BASE_URL}/artists`);
         const artists = await response.json();
 
+        // Obtener todas las canciones para calcular reproducciones por artista
+        const songsResponse = await fetch(`${API_BASE_URL}/songs`);
+        const allSongs = await songsResponse.json();
+
+        console.log('?? Total de canciones:', allSongs.length);
+        console.log('?? Muestra de canciones con plays:', allSongs.slice(0, 5).map(s => ({
+            title: s.title,
+            artist_id: s.artist_id,
+            plays: s.plays
+        })));
+
+        // Calcular reproducciones totales por artista
+        const artistPlays = {};
+        allSongs.forEach(song => {
+            if (!artistPlays[song.artist_id]) {
+                artistPlays[song.artist_id] = 0;
+            }
+            // Usar 'plays' en lugar de 'play_count' para coincidir con el schema de la BD
+            artistPlays[song.artist_id] += parseInt(song.plays) || 0;
+        });
+
+        console.log('?? Reproducciones por artista:', artistPlays);
+
+        // Ordenar artistas por reproducciones totales de sus canciones y tomar los primeros 4
+        const djs = artists
+            .map(artist => ({
+                ...artist,
+                totalPlays: artistPlays[artist.id] || 0
+            }))
+            .sort((a, b) => b.totalPlays - a.totalPlays)
+            .slice(0, 4);
+
+        console.log('?? DJs destacados (ordenados por reproducciones):', djs.map(dj => ({
+            name: dj.name,
+            totalPlays: dj.totalPlays
+        })));
+
         const container = document.getElementById('djs-grid');
-        const djs = artists.filter(a => a.is_verified).slice(0, 4);
+        if (!container) {
+            console.warn('DJs grid container not found');
+            return;
+        }
 
         container.innerHTML = djs.map(dj => `
             <div class="dj-card" onclick="window.showArtistPage(${dj.id})" style="cursor: pointer; text-align: center;">
@@ -563,12 +679,12 @@ async function loadPlaylistSongs(playlistId) {
     try {
         const response = await fetch(`${API_BASE_URL}/playlists/${playlistId}`);
         const playlist = await response.json();
-        currentPlaylist = playlist.songs || [];
+        window.currentPlaylist = playlist.songs || [];
 
         // Mostrar la vista de la playlist en el main content
         const contentWrapper = document.querySelector('.content-wrapper');
 
-        const totalDuration = currentPlaylist.reduce((sum, song) => sum + (song.duration || 0), 0);
+        const totalDuration = window.currentPlaylist.reduce((sum, song) => sum + (song.duration || 0), 0);
         const hours = Math.floor(totalDuration / 3600);
         const minutes = Math.floor((totalDuration % 3600) / 60);
         const durationText = hours > 0 ? `${hours} h ${minutes} min` : `${minutes} min`;
@@ -617,11 +733,11 @@ async function loadPlaylistSongs(playlistId) {
                     <!-- Info de la Playlist -->
                     <div style="flex: 1;">
                         <div style="font-size: 12px; font-weight: 700; text-transform: uppercase; margin-bottom: 8px;">
-                            ${playlist.is_public ? 'Playlist pública' : 'Playlist privada'}
+                            ${playlist.is_public ? 'Playlist p�blica' : 'Playlist privada'}
                         </div>
                         <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
                             <h1 style="font-size: 72px; font-weight: 900; line-height: 1; margin: 0;">${playlist.name}</h1>
-                            <!-- Botón de opciones (3 puntos) -->
+                            <!-- Bot�n de opciones (3 puntos) -->
                             <button id="playlist-options-btn" onclick="togglePlaylistOptions(event, ${playlistId})" style="
                                 width: 40px;
                                 height: 40px;
@@ -680,9 +796,9 @@ async function loadPlaylistSongs(playlistId) {
                 const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
                 return currentUser.username || playlist.username || 'Usuario';
             })()}</span>
-                            <span>•</span>
-                            <span>${currentPlaylist.length} canciones</span>
-                            ${currentPlaylist.length > 0 ? `<span>•</span><span>cerca de ${durationText}</span>` : ''}
+                            <span>�</span>
+                            <span>${window.currentPlaylist.length} canciones</span>
+                            ${window.currentPlaylist.length > 0 ? `<span>�</span><span>cerca de ${durationText}</span>` : ''}
                         </div>
                     </div>
                 </div>
@@ -690,7 +806,7 @@ async function loadPlaylistSongs(playlistId) {
                 <!-- Controles de la Playlist -->
                 <div style="padding: 24px; background: linear-gradient(180deg, rgba(0,0,0,0.2) 0%, transparent 100%);">
                     <div style="display: flex; align-items: center; gap: 24px; margin-bottom: 32px;">
-                        ${currentPlaylist.length > 0 ? `
+                        ${window.currentPlaylist.length > 0 ? `
                             <button onclick="playSong(0)" style="
                                 width: 56px;
                                 height: 56px;
@@ -705,12 +821,12 @@ async function loadPlaylistSongs(playlistId) {
                                 font-size: 24px;
                                 transition: all 0.2s;
                             " onmouseover="this.style.transform='scale(1.06)'" onmouseout="this.style.transform='scale(1)'">
-                                ▶
+                                ?
                             </button>
                         ` : ''}
                     </div>
                     
-                    ${currentPlaylist.length > 0 ? `
+                    ${window.currentPlaylist.length > 0 ? `
                         <!-- Lista de Canciones -->
                         <div style="margin-bottom: 40px;">
                             <!-- Header de la tabla -->
@@ -727,8 +843,8 @@ async function loadPlaylistSongs(playlistId) {
                                 text-transform: uppercase;
                             ">
                                 <div style="text-align: center;">#</div>
-                                <div>Título</div>
-                                <div>Álbum</div>
+                                <div>T�tulo</div>
+                                <div>�lbum</div>
                                 <div style="text-align: center;">
                                     <svg viewBox="0 0 16 16" width="16" height="16">
                                         <path d="M8 1.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13zM0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8z" fill="currentColor"/>
@@ -739,7 +855,7 @@ async function loadPlaylistSongs(playlistId) {
                             </div>
                             
                             <!-- Canciones -->
-                            ${currentPlaylist.map((song, index) => `
+                            ${window.currentPlaylist.map((song, index) => `
                                 <div class="song-row" style="
                                     display: grid;
                                     grid-template-columns: 40px 1fr 1fr 40px 40px;
@@ -790,7 +906,7 @@ async function loadPlaylistSongs(playlistId) {
                             <svg viewBox="0 0 24 24" width="64" height="64" style="margin-bottom: 16px; opacity: 0.5;">
                                 <path d="M3 22a1 1 0 0 1-1-1V3a1 1 0 0 1 2 0v18a1 1 0 0 1-1 1zM15.5 2.134A1 1 0 0 0 14 3v18a1 1 0 0 0 1.5.866l8-4.5a1 1 0 0 0 0-1.732l-8-4.5zM16 19.268V4.732L21.197 12 16 19.268zM7 2a1 1 0 0 0-1 1v18a1 1 0 1 0 2 0V3a1 1 0 0 0-1-1z" fill="currentColor"/>
                             </svg>
-                            <h3 style="font-size: 24px; font-weight: 700; margin-bottom: 8px;">Esta playlist está vacía</h3>
+                            <h3 style="font-size: 24px; font-weight: 700; margin-bottom: 8px;">Esta playlist est� vac�a</h3>
                             <p style="font-size: 14px;">Agrega canciones para empezar a escuchar</p>
                         </div>
                     `}
@@ -798,10 +914,10 @@ async function loadPlaylistSongs(playlistId) {
             </div>
         `;
 
-        // Guardar en historial de navegación
+        // Guardar en historial de navegaci�n
         saveToHistory();
 
-        console.log('Playlist cargada:', playlist.name, currentPlaylist.length, 'canciones');
+        console.log('Playlist cargada:', playlist.name, window.currentPlaylist.length, 'canciones');
     } catch (error) {
         console.error('Error loading playlist songs:', error);
         alert('Error al cargar la playlist');
@@ -844,51 +960,72 @@ function updateProgress() {
 }
 
 function playSong(index) {
-    // Verificar si el usuario está autenticado
+    // Verificar si el usuario est� autenticado
     const authToken = localStorage.getItem('authToken');
     if (!authToken) {
-        console.warn('⚠️ Usuario no autenticado - mostrando modal');
+        console.warn('?? Usuario no autenticado - mostrando modal');
         showAuthRequiredModal();
         return;
     }
 
-    if (currentPlaylist.length === 0) {
-        console.warn('⚠️ No hay canciones en la playlist');
+    if (window.currentPlaylist.length === 0) {
+        console.warn('?? No hay canciones en la playlist');
         return;
     }
 
-    currentSongIndex = index;
-    const song = currentPlaylist[currentSongIndex];
+    window.currentSongIndex = index;
+    const song = window.currentPlaylist[window.currentSongIndex];
 
-    // Validar que la canción existe
+    // Validar que la canci�n existe
     if (!song) {
-        console.error('❌ No se encontró la canción en el índice:', index);
-        console.error('   - currentPlaylist:', currentPlaylist);
-        console.error('   - currentSongIndex:', currentSongIndex);
+        console.error('? No se encontr� la canci�n en el �ndice:', index);
+        console.error('   - window.currentPlaylist:', window.currentPlaylist);
+        console.error('   - window.currentSongIndex:', window.currentSongIndex);
         return;
     }
 
-    // Log de depuración
-    console.log('🎵 playSong ejecutándose:');
-    console.log('   - Índice recibido:', index);
-    console.log('   - currentSongIndex:', currentSongIndex);
-    console.log('   - Canción obtenida:', song);
-    console.log('   - ID de canción:', song.id);
-    console.log('   - Título:', song.title);
+    // Log de depuraci�n
+    console.log('?? playSong ejecut�ndose:');
+    console.log('   - �ndice recibido:', index);
+    console.log('   - window.currentSongIndex:', window.currentSongIndex);
+    console.log('   - Canci�n obtenida:', song);
+    console.log('   - ID de canci�n:', song.id);
+    console.log('   - T�tulo:', song.title);
     console.log('   - Artista ID:', song.artist_id);
 
     playerCover.src = song.cover_image || '/images/placeholder-cover.jpg';
-    playerSongTitle.textContent = song.title;
-    playerArtist.textContent = song.artist_name || 'Artista Desconocido';
 
-    // Guardar el artist_id de la canción actual para poder navegar a su página
+    // Aplicar marquesina si el t�tulo tiene m�s de 20 caracteres
+    const marqueeSpan = playerSongTitle.querySelector('.marquee-text');
+    if (marqueeSpan) {
+        marqueeSpan.textContent = song.title;
+        marqueeSpan.classList.remove('should-animate');
+
+        // Verificar si el texto es m�s largo que 20 caracteres
+        setTimeout(() => {
+            if (song.title.length > 20) {
+                marqueeSpan.classList.add('should-animate');
+                // Duplicar el texto para efecto continuo
+                marqueeSpan.textContent = song.title + '  �  ' + song.title;
+            } else {
+                marqueeSpan.textContent = song.title;
+            }
+        }, 100);
+    } else {
+        // Fallback si no hay span
+        playerSongTitle.textContent = song.title;
+    }
+
+    playerArtist.innerHTML = getFullArtistName(song, window.allArtists || []);
+
+    // Guardar el artist_id de la canci�n actual para poder navegar a su p�gina
     window.currentArtistId = song.artist_id;
     window.currentSongId = song.id;
 
-    // Actualizar sidebar derecha con info de la canción
+    // Actualizar sidebar derecha con info de la canci�n
     updateSongSidebar(song);
 
-    // Verificar si la canción está en "Me Gusta"
+    // Verificar si la canci�n est� en "Me Gusta"
     updateLikeButtonState();
 
     // Actualizar mobile player si existe
@@ -896,7 +1033,7 @@ function playSong(index) {
         updateMobilePlayerInfo(song);
     }
 
-    // Guardar la última canción reproducida en localStorage
+    // Guardar la �ltima canci�n reproducida en localStorage
     try {
         localStorage.setItem('lastPlayedSong', JSON.stringify({
             id: song.id,
@@ -908,7 +1045,7 @@ function playSong(index) {
             duration: song.duration
         }));
     } catch (error) {
-        console.error('Error guardando última canción:', error);
+        console.error('Error guardando �ltima canci�n:', error);
     }
 
     audioPlayer.src = song.file_url;
@@ -917,32 +1054,53 @@ function playSong(index) {
     fetch(`${API_BASE_URL}/songs/${song.id}/play`, { method: 'POST' });
 }
 
-// Función para cargar la última canción reproducida
+// Funci�n para cargar la �ltima canci�n reproducida
 function loadLastPlayedSong() {
     try {
         const lastSongData = localStorage.getItem('lastPlayedSong');
 
         if (lastSongData) {
             const lastSong = JSON.parse(lastSongData);
-            console.log('🎵 Cargando última canción reproducida:', lastSong.title);
+            console.log('?? Cargando �ltima canci�n reproducida:', lastSong.title);
 
-            // Establecer la canción en el reproductor sin reproducirla automáticamente
+            // Establecer la canci�n en el reproductor sin reproducirla autom�ticamente
             playerCover.src = lastSong.cover_image || '/images/placeholder-cover.jpg';
-            playerSongTitle.textContent = lastSong.title;
+
+            // Aplicar marquesina si el t�tulo tiene m�s de 20 caracteres
+            const marqueeSpan = playerSongTitle.querySelector('.marquee-text');
+            if (marqueeSpan) {
+                marqueeSpan.textContent = lastSong.title;
+                marqueeSpan.classList.remove('should-animate');
+
+                // Verificar si el texto es m�s largo que 20 caracteres
+                setTimeout(() => {
+                    if (lastSong.title.length > 20) {
+                        marqueeSpan.classList.add('should-animate');
+                        // Duplicar el texto para efecto continuo
+                        marqueeSpan.textContent = lastSong.title + '  -  ' + lastSong.title;
+                    } else {
+                        marqueeSpan.textContent = lastSong.title;
+                    }
+                }, 100);
+            } else {
+                // Fallback si no hay span
+                playerSongTitle.textContent = lastSong.title;
+            }
+
             playerArtist.textContent = lastSong.artist_name || 'Artista Desconocido';
 
             // Guardar IDs actuales
             window.currentArtistId = lastSong.artist_id;
             window.currentSongId = lastSong.id;
 
-            // NO sobrescribir currentPlaylist - dejar que loadReleases() lo maneje
-            // currentPlaylist = [lastSong];
-            // currentSongIndex = 0;
+            // NO sobrescribir window.currentPlaylist - dejar que loadReleases() lo maneje
+            // window.currentPlaylist = [lastSong];
+            // window.currentSongIndex = 0;
 
-            // Actualizar sidebar derecha con info de la canción
+            // Actualizar sidebar derecha con info de la canci�n
             updateSongSidebar(lastSong);
 
-            // Verificar si la canción está en "Me Gusta"
+            // Verificar si la canci�n est� en "Me Gusta"
             updateLikeButtonState();
 
             // Actualizar mobile player si existe
@@ -953,16 +1111,16 @@ function loadLastPlayedSong() {
             // Establecer la fuente del audio pero NO reproducir
             audioPlayer.src = lastSong.file_url;
 
-            console.log('✅ Última canción cargada exitosamente');
+            console.log('? �ltima canci�n cargada exitosamente');
         } else {
-            console.log('ℹ️ No hay última canción guardada');
+            console.log('?? No hay �ltima canci�n guardada');
         }
     } catch (error) {
-        console.error('❌ Error cargando última canción:', error);
+        console.error('? Error cargando �ltima canci�n:', error);
     }
 }
 
-// Función para ir a la página del artista actual
+// Funci�n para ir a la p�gina del artista actual
 window.goToCurrentArtist = function () {
     if (window.currentArtistId) {
         window.showArtistPage(window.currentArtistId);
@@ -971,36 +1129,36 @@ window.goToCurrentArtist = function () {
     }
 }
 
-// Función para mostrar el modal de autenticación requerida
+// Funci�n para mostrar el modal de autenticaci�n requerida
 function showAuthRequiredModal() {
     const modal = document.getElementById('auth-required-modal');
     if (modal) {
         modal.style.display = 'flex';
-        console.log('✅ Modal de autenticación mostrado');
+        console.log('? Modal de autenticaci�n mostrado');
     }
 }
 
-// Función para cerrar el modal de autenticación
+// Funci�n para cerrar el modal de autenticaci�n
 window.closeAuthModal = function () {
     const modal = document.getElementById('auth-required-modal');
     if (modal) {
         modal.style.display = 'none';
-        console.log('✅ Modal de autenticación cerrado');
+        console.log('? Modal de autenticaci�n cerrado');
     }
 }
 
-// Función para abrir el modal de agregar a playlist
+// Funci�n para abrir el modal de agregar a playlist
 window.openAddToPlaylistModal = async function () {
-    // Verificar si el usuario está autenticado
+    // Verificar si el usuario est� autenticado
     const authToken = localStorage.getItem('authToken');
     if (!authToken) {
-        console.warn('⚠️ Usuario no autenticado - mostrando modal');
+        console.warn('?? Usuario no autenticado - mostrando modal');
         showAuthRequiredModal();
         return;
     }
 
     if (!window.currentSongId) {
-        alert('No hay canción seleccionada');
+        alert('No hay canci�n seleccionada');
         return;
     }
 
@@ -1008,7 +1166,7 @@ window.openAddToPlaylistModal = async function () {
         const token = localStorage.getItem('authToken');
         const userId = getCurrentUserId();
 
-        // Agregar user_id como query parameter para obtener playlists públicas y privadas del usuario
+        // Agregar user_id como query parameter para obtener playlists p�blicas y privadas del usuario
         const url = userId ? `${API_BASE_URL}/playlists?user_id=${userId}` : `${API_BASE_URL}/playlists`;
 
         const response = await fetch(url, {
@@ -1040,7 +1198,7 @@ window.openAddToPlaylistModal = async function () {
                     onmouseout="this.style.background='var(--bg-highlight)'">
                     <div style="font-weight: 600;">${playlist.name}</div>
                     <div style="font-size: 12px; color: var(--text-subdued); margin-top: 4px;">
-                        ${playlist.is_public ? '🌐 Pública' : '🔒 Privada'} • ${playlist.song_count || 0} canciones
+                        ${playlist.is_public ? '?? P�blica' : '?? Privada'} � ${playlist.song_count || 0} canciones
                     </div>
                 </button>
             `).join('');
@@ -1053,16 +1211,16 @@ window.openAddToPlaylistModal = async function () {
     }
 }
 
-// Función para cerrar el modal
+// Funci�n para cerrar el modal
 window.closeAddToPlaylistModal = function () {
     const modal = document.getElementById('add-to-playlist-modal');
     modal.style.display = 'none';
 }
 
-// Función para agregar canción a una playlist
+// Funci�n para agregar canci�n a una playlist
 window.addSongToPlaylist = async function (playlistId, playlistName) {
     if (!window.currentSongId) {
-        alert('No hay canción seleccionada');
+        alert('No hay canci�n seleccionada');
         return;
     }
 
@@ -1081,25 +1239,25 @@ window.addSongToPlaylist = async function (playlistId, playlistName) {
 
         if (!response.ok) {
             const error = await response.json();
-            throw new Error(error.error || 'Error al agregar la canción');
+            throw new Error(error.error || 'Error al agregar la canci�n');
         }
 
-        alert(`✅ Canción agregada a "${playlistName}"`);
+        alert(`? Canci�n agregada a "${playlistName}"`);
 
-        // Cerrar el modal automáticamente
+        // Cerrar el modal autom�ticamente
         closeAddToPlaylistModal();
 
-        // Recargar las playlists del sidebar para mostrar el número actualizado
+        // Recargar las playlists del sidebar para mostrar el n�mero actualizado
         await loadPlaylists();
     } catch (error) {
         console.error('Error adding song to playlist:', error);
-        alert('❌ ' + error.message);
+        alert('? ' + error.message);
     }
 }
 
-// Función para eliminar canción de una playlist
+// Funci�n para eliminar canci�n de una playlist
 window.removeSongFromPlaylist = async function (playlistId, songId, songTitle) {
-    if (!confirm(`¿Estás seguro de que quieres eliminar "${songTitle}" de esta playlist?`)) {
+    if (!confirm(`�Est�s seguro de que quieres eliminar "${songTitle}" de esta playlist?`)) {
         return;
     }
 
@@ -1114,34 +1272,34 @@ window.removeSongFromPlaylist = async function (playlistId, songId, songTitle) {
 
         if (!response.ok) {
             const error = await response.json();
-            throw new Error(error.error || 'Error al eliminar la canción');
+            throw new Error(error.error || 'Error al eliminar la canci�n');
         }
 
-        alert(`✅ Canción eliminada de la playlist`);
+        alert(`? Canci�n eliminada de la playlist`);
 
         // Recargar la playlist actual para reflejar los cambios
         await loadPlaylistSongs(playlistId);
 
-        // También recargar las playlists del sidebar
+        // Tambi�n recargar las playlists del sidebar
         await loadPlaylists();
     } catch (error) {
         console.error('Error removing song from playlist:', error);
-        alert('❌ ' + error.message);
+        alert('? ' + error.message);
     }
 }
 
-// Función para agregar/quitar de "Me Gusta"
+// Funci�n para agregar/quitar de "Me Gusta"
 window.toggleLikeSong = async function () {
-    // Verificar si el usuario está autenticado
+    // Verificar si el usuario est� autenticado
     const authToken = localStorage.getItem('authToken');
     if (!authToken) {
-        console.warn('⚠️ Usuario no autenticado - mostrando modal');
+        console.warn('?? Usuario no autenticado - mostrando modal');
         showAuthRequiredModal();
         return;
     }
 
     if (!window.currentSongId) {
-        alert('No hay canción seleccionada');
+        alert('No hay canci�n seleccionada');
         return;
     }
 
@@ -1159,7 +1317,7 @@ window.toggleLikeSong = async function () {
         const playlists = await playlistsResponse.json();
         let likePlaylist = playlists.find(p => p.name === 'Me Gusta');
 
-        // Si no existe la playlist "Me Gusta", crearla automáticamente
+        // Si no existe la playlist "Me Gusta", crearla autom�ticamente
         if (!likePlaylist) {
             const createResponse = await fetch(`${API_BASE_URL}/playlists`, {
                 method: 'POST',
@@ -1185,7 +1343,7 @@ window.toggleLikeSong = async function () {
             await loadPlaylists();
         }
 
-        // Verificar si la canción ya está en "Me Gusta"
+        // Verificar si la canci�n ya est� en "Me Gusta"
         const playlistDetailResponse = await fetch(`${API_BASE_URL}/playlists/${likePlaylist.id}`, {
             headers: {
                 'Authorization': `Bearer ${token}`
@@ -1207,7 +1365,7 @@ window.toggleLikeSong = async function () {
                 throw new Error('Error al quitar de Me Gusta');
             }
 
-            alert('💔 Canción quitada de Me Gusta');
+            alert('?? Canci�n quitada de Me Gusta');
         } else {
             // Agregar a "Me Gusta"
             const addResponse = await fetch(`${API_BASE_URL}/playlists/${likePlaylist.id}/songs`, {
@@ -1226,18 +1384,18 @@ window.toggleLikeSong = async function () {
                 throw new Error(error.error || 'Error al agregar a Me Gusta');
             }
 
-            alert('❤️ Canción agregada a Me Gusta');
+            alert('?? Canci�n agregada a Me Gusta');
         }
 
-        // Actualizar el estado del botón
+        // Actualizar el estado del bot�n
         updateLikeButtonState();
     } catch (error) {
         console.error('Error toggling like:', error);
-        alert('❌ ' + error.message);
+        alert('? ' + error.message);
     }
 }
 
-// Función para actualizar el estado visual del botón de "Me Gusta"
+// Funci�n para actualizar el estado visual del bot�n de "Me Gusta"
 async function updateLikeButtonState() {
     if (!window.currentSongId) return;
 
@@ -1264,7 +1422,7 @@ async function updateLikeButtonState() {
         const playlistDetail = await playlistDetailResponse.json();
         const isLiked = playlistDetail.songs.some(s => s.id === window.currentSongId);
 
-        // Actualizar botón desktop
+        // Actualizar bot�n desktop
         const likeBtn = document.getElementById('like-song-btn');
         if (likeBtn) {
             if (isLiked) {
@@ -1276,7 +1434,7 @@ async function updateLikeButtonState() {
             }
         }
 
-        // Actualizar botón móvil
+        // Actualizar bot�n m�vil
         const mobileLikeBtn = document.getElementById('mobile-like-btn');
         if (mobileLikeBtn) {
             if (isLiked) {
@@ -1286,7 +1444,7 @@ async function updateLikeButtonState() {
             }
         }
 
-        // Actualizar botón fullscreen
+        // Actualizar bot�n fullscreen
         const fullscreenLikeBtn = document.getElementById('fullscreen-like-btn');
         if (fullscreenLikeBtn) {
             if (isLiked) {
@@ -1301,30 +1459,30 @@ async function updateLikeButtonState() {
 }
 
 
-// Función para actualizar el sidebar con info de la canción
+// Funci�n para actualizar el sidebar con info de la canci�n
 function updateSongSidebar(song) {
-    // Actualizar portada de la canción
+    // Actualizar portada de la canci�n
     const songCoverSidebar = document.getElementById('song-cover-sidebar');
     if (songCoverSidebar) {
         songCoverSidebar.src = song.cover_image || '/images/placeholder-cover.jpg';
     }
 
-    // Actualizar título en el header del sidebar
+    // Actualizar t�tulo en el header del sidebar
     const songTitleSidebar = document.getElementById('song-title-sidebar');
     if (songTitleSidebar) {
-        songTitleSidebar.textContent = song.title || 'Canción';
+        songTitleSidebar.textContent = song.title || 'Canci�n';
     }
 
-    // Actualizar título detallado
+    // Actualizar t�tulo detallado
     const songTitleDetail = document.getElementById('song-title-detail');
     if (songTitleDetail) {
-        songTitleDetail.textContent = song.title || 'Sin título';
+        songTitleDetail.textContent = song.title || 'Sin t�tulo';
     }
 
     // Actualizar artista (clickeable)
     const songArtistDetail = document.getElementById('song-artist-detail');
     if (songArtistDetail) {
-        songArtistDetail.textContent = song.artist_name || 'Artista Desconocido';
+        songArtistDetail.innerHTML = getFullArtistName(song, window.allArtists || []);
     }
 
     // Cargar redes sociales del artista
@@ -1341,7 +1499,7 @@ function updateSongSidebar(song) {
 
 async function loadArtistSocialLinks(artistId) {
     try {
-        console.log('🔍 Cargando redes sociales para artista ID:', artistId);
+        console.log('?? Cargando redes sociales para artista ID:', artistId);
 
         const token = localStorage.getItem('authToken');
         const headers = {};
@@ -1352,7 +1510,7 @@ async function loadArtistSocialLinks(artistId) {
         const response = await fetch(`${API_BASE_URL}/admin/artists/${artistId}`, { headers });
         const artist = await response.json();
 
-        console.log('📦 Datos del artista recibidos:', artist);
+        console.log('?? Datos del artista recibidos:', artist);
 
         // Parsear social_links si es un string JSON
         let socialLinks = {};
@@ -1366,13 +1524,13 @@ async function loadArtistSocialLinks(artistId) {
             }
         }
 
-        console.log('📘 Facebook:', socialLinks.facebook);
-        console.log('📷 Instagram:', socialLinks.instagram);
-        console.log('📱 WhatsApp:', socialLinks.whatsapp);
+        console.log('?? Facebook:', socialLinks.facebook);
+        console.log('?? Instagram:', socialLinks.instagram);
+        console.log('?? WhatsApp:', socialLinks.whatsapp);
 
         const socialLinksContainer = document.getElementById('song-social-links');
         if (!socialLinksContainer) {
-            console.warn('⚠️ Contenedor song-social-links no encontrado');
+            console.warn('?? Contenedor song-social-links no encontrado');
             return;
         }
 
@@ -1462,7 +1620,7 @@ async function loadArtistSocialLinks(artistId) {
             `;
         }
 
-        console.log('✅ HTML de redes sociales generado:', socialHTML ? 'Sí' : 'No (vacío)');
+        console.log('? HTML de redes sociales generado:', socialHTML ? 'S�' : 'No (vac�o)');
         socialLinksContainer.innerHTML = socialHTML || '<p style="font-size: 12px; color: var(--text-subdued);">Sin redes sociales</p>';
     } catch (error) {
         console.error('Error cargando redes sociales del artista:', error);
@@ -1470,10 +1628,10 @@ async function loadArtistSocialLinks(artistId) {
 }
 
 function togglePlayPause() {
-    // Verificar si el usuario está autenticado
+    // Verificar si el usuario est� autenticado
     const authToken = localStorage.getItem('authToken');
     if (!authToken) {
-        console.warn('⚠️ Usuario no autenticado - mostrando modal');
+        console.warn('?? Usuario no autenticado - mostrando modal');
         showAuthRequiredModal();
         return;
     }
@@ -1486,41 +1644,41 @@ function togglePlayPause() {
 }
 
 function playNext() {
-    // Verificar si el usuario está autenticado
+    // Verificar si el usuario est� autenticado
     const authToken = localStorage.getItem('authToken');
     if (!authToken) {
-        console.warn('⚠️ Usuario no autenticado - mostrando modal');
+        console.warn('?? Usuario no autenticado - mostrando modal');
         showAuthRequiredModal();
         return;
     }
 
-    if (currentPlaylist.length === 0) return;
+    if (window.currentPlaylist.length === 0) return;
 
     if (isShuffle) {
-        currentSongIndex = Math.floor(Math.random() * currentPlaylist.length);
+        window.currentSongIndex = Math.floor(Math.random() * window.currentPlaylist.length);
     } else {
-        currentSongIndex = (currentSongIndex + 1) % currentPlaylist.length;
+        window.currentSongIndex = (window.currentSongIndex + 1) % window.currentPlaylist.length;
     }
 
-    playSong(currentSongIndex);
+    playSong(window.currentSongIndex);
 }
 
 function playPrevious() {
-    // Verificar si el usuario está autenticado
+    // Verificar si el usuario est� autenticado
     const authToken = localStorage.getItem('authToken');
     if (!authToken) {
-        console.warn('⚠️ Usuario no autenticado - mostrando modal');
+        console.warn('?? Usuario no autenticado - mostrando modal');
         showAuthRequiredModal();
         return;
     }
 
-    if (currentPlaylist.length === 0) return;
+    if (window.currentPlaylist.length === 0) return;
 
     if (audioPlayer.currentTime > 3) {
         audioPlayer.currentTime = 0;
     } else {
-        currentSongIndex = currentSongIndex === 0 ? currentPlaylist.length - 1 : currentSongIndex - 1;
-        playSong(currentSongIndex);
+        window.currentSongIndex = window.currentSongIndex === 0 ? window.currentPlaylist.length - 1 : window.currentSongIndex - 1;
+        playSong(window.currentSongIndex);
     }
 }
 
@@ -1528,7 +1686,7 @@ function handleSongEnd() {
     if (repeatMode === 'one') {
         audioPlayer.currentTime = 0;
         audioPlayer.play();
-    } else if (repeatMode === 'all' || currentSongIndex < currentPlaylist.length - 1) {
+    } else if (repeatMode === 'all' || window.currentSongIndex < window.currentPlaylist.length - 1) {
         playNext();
     }
 }
@@ -1571,7 +1729,7 @@ function toggleShuffle() {
         shuffleBtn.classList.toggle('active', isShuffle);
     }
 
-    // Actualizar botón fullscreen
+    // Actualizar bot�n fullscreen
     const fullscreenShuffleBtn = document.getElementById('fullscreen-shuffle-btn');
     if (fullscreenShuffleBtn) {
         if (isShuffle) {
@@ -1634,7 +1792,7 @@ function toggleRepeat() {
         }
     }
 
-    // Actualizar botón fullscreen
+    // Actualizar bot�n fullscreen
     const fullscreenRepeatBtn = document.getElementById('fullscreen-repeat-btn');
     if (fullscreenRepeatBtn) {
         // Remover badge anterior si existe
@@ -1674,7 +1832,7 @@ function toggleRepeat() {
     }
 }
 
-// ===== FUNCIONES GLOBALES DE NAVEGACIÓN DE ARTISTA =====
+// ===== FUNCIONES GLOBALES DE NAVEGACI�N DE ARTISTA =====
 // Estas funciones deben estar disponibles globalmente para los onclick inline
 window.showArtistPage = async function (artistId) {
     try {
@@ -1725,7 +1883,7 @@ window.showArtistPage = async function (artistId) {
                             font-size: 24px;
                             transition: all 0.2s;
                         " onmouseover="this.style.transform='scale(1.06)'" onmouseout="this.style.transform='scale(1)'">
-                            ▶
+                            ?
                         </button>
                     </div>
                     
@@ -1772,6 +1930,69 @@ window.showArtistPage = async function (artistId) {
                     </div>
         `;
 
+        // Buscar colaboraciones (canciones donde este artista aparece en ft_artists)
+        const collaborations = allSongs.filter(song => {
+            if (!song.ft_artists) return false;
+            try {
+                let ftIds = [];
+                if (typeof song.ft_artists === 'string') {
+                    ftIds = JSON.parse(song.ft_artists);
+                } else if (Array.isArray(song.ft_artists)) {
+                    ftIds = song.ft_artists;
+                }
+                return ftIds.some(id => id.toString() === artistId.toString());
+            } catch (error) {
+                return false;
+            }
+        });
+
+        // Mostrar sección de colaboraciones solo si hay colaboraciones
+        if (collaborations.length > 0) {
+            html += `
+                <div class="section-header" style="margin-top: 40px; margin-bottom: 16px;">
+                    <h2>Colaboraciones</h2>
+                </div>
+                
+                <div class="song-list" style="margin-bottom: 40px;">
+            `;
+
+            collaborations.forEach((song, index) => {
+                html += `
+                    <div class="song-row" onclick="window.playSongById(${song.id})" style="
+                        display: grid;
+                        grid-template-columns: 40px 1fr auto 40px;
+                        gap: 16px;
+                        padding: 8px;
+                        border-radius: 4px;
+                        cursor: pointer;
+                        align-items: center;
+                        transition: background-color 0.2s;
+                    " onmouseover="this.style.backgroundColor='rgba(255,255,255,0.1)'" onmouseout="this.style.backgroundColor='transparent'">
+                        <div style="display: flex; align-items: center; justify-content: center;">
+                            <span style="color: var(--text-subdued); font-size: 16px;">${index + 1}</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            ${song.cover_image ? `<img src="${song.cover_image}" alt="${song.title}" style="width: 40px; height: 40px; border-radius: 4px;">` : ''}
+                            <div>
+                                <div style="font-size: 16px; color: var(--text-base); margin-bottom: 4px;">${song.title}</div>
+                                <div style="font-size: 14px; color: var(--text-subdued);">${song.artist_name}</div>
+                            </div>
+                        </div>
+                        <div style="color: var(--text-subdued); font-size: 14px;">${formatTime(song.duration)}</div>
+                        <button class="song-more-btn" onclick="event.stopPropagation(); toggleSongPlaylist(${song.id}, event)" title="Agregar a playlist">
+                            <svg viewBox="0 0 16 16" width="16" height="16">
+                                <path d="M15.25 8a.75.75 0 0 1-.75.75H8.75v5.75a.75.75 0 0 1-1.5 0V8.75H1.5a.75.75 0 0 1 0-1.5h5.75V1.5a.75.75 0 0 1 1.5 0v5.75h5.75a.75.75 0 0 1 .75.75z" fill="currentColor"/>
+                            </svg>
+                        </button>
+                    </div>
+                `;
+            });
+
+            html += `
+                </div>
+            `;
+        }
+
         if (artist.bio || artist.cover_image_2) {
             html += `
                 <div class="artist-bio-section" style="
@@ -1792,7 +2013,7 @@ window.showArtistPage = async function (artistId) {
                         <p style="font-size: 16px; line-height: 1.8; color: var(--text-base); max-width: 900px;">
                             ${artist.bio}
                         </p>
-                    ` : '<p style="font-size: 16px; color: var(--text-subdued);">No hay biografía disponible.</p>'}
+                    ` : '<p style="font-size: 16px; color: var(--text-subdued);">No hay biograf�a disponible.</p>'}
                 </div>
             `;
         }
@@ -1867,8 +2088,8 @@ window.playArtistSongs = async function (artistId) {
         const artistSongs = allSongs.filter(s => s.artist_id === artistId);
 
         if (artistSongs.length > 0) {
-            currentPlaylist = artistSongs;
-            currentSongIndex = 0;
+            window.currentPlaylist = artistSongs;
+            window.currentSongIndex = 0;
             playSong(0);
         }
     } catch (error) {
@@ -1880,8 +2101,8 @@ window.playSongById = async function (songId) {
     try {
         const response = await fetch(`${API_BASE_URL}/songs/${songId}`);
         const song = await response.json();
-        currentPlaylist = [song];
-        currentSongIndex = 0;
+        window.currentPlaylist = [song];
+        window.currentSongIndex = 0;
         playSong(0);
     } catch (error) {
         console.error('Error playing song:', error);
@@ -1992,13 +2213,13 @@ function initializeEventListeners() {
         });
     }
 
-    // Event listener para el botón de "Me Gusta"
+    // Event listener para el bot�n de "Me Gusta"
     const likeSongBtn = document.getElementById('like-song-btn');
     if (likeSongBtn) {
         likeSongBtn.addEventListener('click', toggleLikeSong);
     }
 
-    // Event listener para el botón de "Agregar a playlist"
+    // Event listener para el bot�n de "Agregar a playlist"
     const addToPlaylistBtn = document.getElementById('add-to-playlist-btn');
     if (addToPlaylistBtn) {
         addToPlaylistBtn.addEventListener('click', (e) => {
@@ -2007,7 +2228,7 @@ function initializeEventListeners() {
         });
     }
 
-    // Cerrar modal al hacer clic fuera de él
+    // Cerrar modal al hacer clic fuera de �l
     const addToPlaylistModal = document.getElementById('add-to-playlist-modal');
     if (addToPlaylistModal) {
         addToPlaylistModal.addEventListener('click', (e) => {
@@ -2027,7 +2248,7 @@ function initializeEventListeners() {
         }, 300));
     }
 
-    // ===== NAVEGACIÃ“N (ATRÃS/ADELANTE) =====
+    // ===== NAVEGACIÓN (ATRÁS/ADELANTE) =====
     function saveToHistory() {
         if (isNavigating) return;
 
@@ -2139,7 +2360,7 @@ function initializeEventListeners() {
         updateNavigationButtons();
     }
 
-    // ===== BÃšSQUEDA =====
+    // ===== BÚSQUEDA =====
     async function searchSongs(query) {
         try {
             const songsResponse = await fetch(`${API_BASE_URL}/songs/search/${encodeURIComponent(query)}`);
@@ -2215,7 +2436,7 @@ function initializeEventListeners() {
         }
     }
 
-    // Función para obtener iconos de redes sociales
+    // Funci�n para obtener iconos de redes sociales
     function getSocialIcon(platform) {
         const icons = {
             instagram: '<svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>',
@@ -2336,7 +2557,7 @@ function initializeEventListeners() {
                     </div>
                     
                     <div style="margin-bottom: 24px;">
-                        <label style="display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px;">Teléfono</label>
+                        <label style="display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px;">Tel�fono</label>
                         <input type="tel" id="profile-phone" value="${currentUser.phone || ''}" placeholder="+1234567890" style="width: 100%; padding: 12px; background: var(--bg-base); border: 1px solid var(--border-subtle); border-radius: 4px; color: var(--text-base); font-size: 14px;">
                     </div>
                     
@@ -2351,28 +2572,28 @@ function initializeEventListeners() {
                                 <button onclick="document.getElementById('profile-image-input').click(); return false;" style="padding: 8px 16px; background: var(--bg-elevated); border: 1px solid var(--border-subtle); border-radius: 4px; color: var(--text-base); font-size: 14px; cursor: pointer; margin-bottom: 8px;">
                                     Seleccionar imagen
                                 </button>
-                                <p style="font-size: 12px; color: var(--text-subdued); margin: 0;">JPG, PNG o GIF (máx. 2MB)</p>
+                                <p style="font-size: 12px; color: var(--text-subdued); margin: 0;">JPG, PNG o GIF (m�x. 2MB)</p>
                             </div>
                         </div>
                     </div>
                     
                     <hr style="border: none; border-top: 1px solid var(--border-subtle); margin: 32px 0;">
                     
-                    <h2 style="font-size: 20px; font-weight: 700; margin-bottom: 24px;">Cambiar contraseña</h2>
+                    <h2 style="font-size: 20px; font-weight: 700; margin-bottom: 24px;">Cambiar contrase�a</h2>
                     
                     <div style="margin-bottom: 24px;">
-                        <label style="display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px;">Contraseña actual</label>
-                        <input type="password" id="profile-current-password" placeholder="Ingresa tu contraseña actual" style="width: 100%; padding: 12px; background: var(--bg-base); border: 1px solid var(--border-subtle); border-radius: 4px; color: var(--text-base); font-size: 14px;">
+                        <label style="display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px;">Contrase�a actual</label>
+                        <input type="password" id="profile-current-password" placeholder="Ingresa tu contrase�a actual" style="width: 100%; padding: 12px; background: var(--bg-base); border: 1px solid var(--border-subtle); border-radius: 4px; color: var(--text-base); font-size: 14px;">
                     </div>
                     
                     <div style="margin-bottom: 24px;">
-                        <label style="display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px;">Nueva contraseña</label>
-                        <input type="password" id="profile-new-password" placeholder="Ingresa tu nueva contraseña" style="width: 100%; padding: 12px; background: var(--bg-base); border: 1px solid var(--border-subtle); border-radius: 4px; color: var(--text-base); font-size: 14px;">
+                        <label style="display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px;">Nueva contrase�a</label>
+                        <input type="password" id="profile-new-password" placeholder="Ingresa tu nueva contrase�a" style="width: 100%; padding: 12px; background: var(--bg-base); border: 1px solid var(--border-subtle); border-radius: 4px; color: var(--text-base); font-size: 14px;">
                     </div>
                     
                     <div style="margin-bottom: 24px;">
-                        <label style="display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px;">Confirmar nueva contraseña</label>
-                        <input type="password" id="profile-confirm-password" placeholder="Confirma tu nueva contraseña" style="width: 100%; padding: 12px; background: var(--bg-base); border: 1px solid var(--border-subtle); border-radius: 4px; color: var(--text-base); font-size: 14px;">
+                        <label style="display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px;">Confirmar nueva contrase�a</label>
+                        <input type="password" id="profile-confirm-password" placeholder="Confirma tu nueva contrase�a" style="width: 100%; padding: 12px; background: var(--bg-base); border: 1px solid var(--border-subtle); border-radius: 4px; color: var(--text-base); font-size: 14px;">
                     </div>
                     
                     <div style="display: flex; gap: 16px;">
@@ -2397,7 +2618,7 @@ function initializeEventListeners() {
                 profileImageInput.addEventListener('change', function (e) {
                     const file = e.target.files[0];
                     if (file) {
-                        // Validar tamaño (2MB máximo)
+                        // Validar tama�o (2MB m�ximo)
                         if (file.size > 2 * 1024 * 1024) {
                             alert('La imagen no debe superar los 2MB');
                             return;
@@ -2405,7 +2626,7 @@ function initializeEventListeners() {
 
                         // Validar tipo
                         if (!file.type.startsWith('image/')) {
-                            alert('Por favor selecciona una imagen válida');
+                            alert('Por favor selecciona una imagen v�lida');
                             return;
                         }
 
@@ -2413,7 +2634,7 @@ function initializeEventListeners() {
                         const reader = new FileReader();
                         reader.onload = function (e) {
                             profileImagePreview.innerHTML = `<img src="${e.target.result}" style="width: 100%; height: 100%; object-fit: cover;">`;
-                            // Guardar el archivo temporalmente para subirlo después
+                            // Guardar el archivo temporalmente para subirlo despu�s
                             window.tempProfileImageFile = file;
                         };
                         reader.readAsDataURL(file);
@@ -2436,17 +2657,17 @@ function initializeEventListeners() {
     }
 
     window.logout = function () {
-        // Cerrar el popup del menú de usuario
+        // Cerrar el popup del men� de usuario
         const userMenuPopup = document.getElementById('user-menu-popup');
         if (userMenuPopup) {
             userMenuPopup.style.display = 'none';
         }
 
-        // Limpiar datos de sesión
+        // Limpiar datos de sesi�n
         localStorage.removeItem('authToken');
         localStorage.removeItem('currentUser');
 
-        // Redirigir a la página de login
+        // Redirigir a la p�gina de login
         window.location.href = '/login.html';
     }
 
@@ -2487,12 +2708,12 @@ function initializeEventListeners() {
                 // Limpiar archivo temporal
                 delete window.tempProfileImageFile;
 
-                alert('✅ Imagen de perfil actualizada correctamente');
+                alert('? Imagen de perfil actualizada correctamente');
                 // Actualizar el avatar en el header
                 generateUserAvatar();
                 return;
             } catch (error) {
-                alert('❌ Error al subir la imagen: ' + error.message);
+                alert('? Error al subir la imagen: ' + error.message);
                 return;
             }
         }
@@ -2530,39 +2751,39 @@ function initializeEventListeners() {
                 currentUser.phone = phone;
                 localStorage.setItem('currentUser', JSON.stringify(currentUser));
 
-                alert('✅ Datos personales actualizados correctamente');
+                alert('? Datos personales actualizados correctamente');
 
-                // Si no hay cambios de contraseña, terminar aquí
+                // Si no hay cambios de contrase�a, terminar aqu�
                 if (!currentPassword && !newPassword && !confirmPassword) {
                     return;
                 }
             } catch (error) {
-                alert('❌ Error al actualizar datos: ' + error.message);
+                alert('? Error al actualizar datos: ' + error.message);
                 return;
             }
         }
 
-        // Validar que se hayan llenado los campos de contraseña
+        // Validar que se hayan llenado los campos de contrase�a
         if (!currentPassword && !newPassword && !confirmPassword) {
             alert('No hay cambios para guardar.');
             return;
         }
 
-        // Validar que todos los campos de contraseña estén llenos
+        // Validar que todos los campos de contrase�a est�n llenos
         if (!currentPassword || !newPassword || !confirmPassword) {
-            alert('Por favor, completa todos los campos de contraseña.');
+            alert('Por favor, completa todos los campos de contrase�a.');
             return;
         }
 
-        // Validar que las contraseñas nuevas coincidan
+        // Validar que las contrase�as nuevas coincidan
         if (newPassword !== confirmPassword) {
-            alert('Las contraseñas nuevas no coinciden.');
+            alert('Las contrase�as nuevas no coinciden.');
             return;
         }
 
-        // Validar longitud mínima de la contraseña
+        // Validar longitud m�nima de la contrase�a
         if (newPassword.length < 6) {
-            alert('La nueva contraseña debe tener al menos 6 caracteres.');
+            alert('La nueva contrase�a debe tener al menos 6 caracteres.');
             return;
         }
 
@@ -2584,19 +2805,19 @@ function initializeEventListeners() {
 
             if (!response.ok) {
                 const error = await response.json();
-                throw new Error(error.error || 'Error al cambiar la contraseña');
+                throw new Error(error.error || 'Error al cambiar la contrase�a');
             }
 
-            alert('✅ Contraseña actualizada correctamente');
+            alert('? Contrase�a actualizada correctamente');
 
-            // Limpiar los campos de contraseña
+            // Limpiar los campos de contrase�a
             document.getElementById('profile-current-password').value = '';
             document.getElementById('profile-new-password').value = '';
             document.getElementById('profile-confirm-password').value = '';
 
         } catch (error) {
             console.error('Error updating password:', error);
-            alert('❌ Error: ' + error.message);
+            alert('? Error: ' + error.message);
         }
     }
 
@@ -2606,7 +2827,7 @@ function initializeEventListeners() {
         contentWrapper.innerHTML = `
         <div class="filter-tabs">
             <button class="filter-tab active">Todo</button>
-            <button class="filter-tab">MÃºsica</button>
+            <button class="filter-tab">Música</button>
             <button class="filter-tab">Podcasts</button>
         </div>
 
@@ -2619,7 +2840,7 @@ function initializeEventListeners() {
         saveToHistory();
     }
 
-    // Función auxiliar para formatear tiempo
+    // Funci�n auxiliar para formatear tiempo
     function formatTime(seconds) {
         if (isNaN(seconds)) return '0:00';
         const mins = Math.floor(seconds / 60);
@@ -2627,7 +2848,7 @@ function initializeEventListeners() {
         return `${mins}:${secs.toString().padStart(2, '0')}`;
     }
 
-    // Función auxiliar para generar gradientes aleatorios
+    // Funci�n auxiliar para generar gradientes aleatorios
     function getRandomGradient() {
         const gradients = [
             '#667eea 0%, #764ba2 100%',
@@ -2644,7 +2865,7 @@ function initializeEventListeners() {
         return gradients[Math.floor(Math.random() * gradients.length)];
     }
 
-    // Función debounce
+    // Funci�n debounce
     function debounce(func, wait) {
         let timeout;
         return function executedFunction(...args) {
@@ -2657,5 +2878,58 @@ function initializeEventListeners() {
         };
     }
 
-    console.log('🎵 Zonorax Player inicializado');
+    // ===== FUNCIONALIDAD DE ARRASTRE PARA BARRAS =====
+
+    // Funci�n gen�rica para hacer una barra arrastrable
+    function makeDraggable(barElement, onUpdate) {
+        let isDragging = false;
+
+        function updatePosition(e) {
+            const rect = barElement.getBoundingClientRect();
+            const percent = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+            onUpdate(percent);
+        }
+
+        function startDrag(e) {
+            isDragging = true;
+            updatePosition(e);
+            e.preventDefault();
+        }
+
+        function drag(e) {
+            if (isDragging) {
+                updatePosition(e);
+            }
+        }
+
+        function stopDrag() {
+            isDragging = false;
+        }
+
+        barElement.addEventListener('mousedown', startDrag);
+        document.addEventListener('mousemove', drag);
+        document.addEventListener('mouseup', stopDrag);
+    }
+
+    // Aplicar arrastre a la barra de progreso
+    const progressBarBg = document.querySelector('.progress-bar-bg');
+    if (progressBarBg) {
+        makeDraggable(progressBarBg, (percent) => {
+            if (audioPlayer && audioPlayer.duration) {
+                audioPlayer.currentTime = percent * audioPlayer.duration;
+            }
+        });
+    }
+
+    // Aplicar arrastre a la barra de volumen
+    const volumeBarBg = document.querySelector('.volume-bar-bg');
+    if (volumeBarBg) {
+        makeDraggable(volumeBarBg, (percent) => {
+            currentVolume = percent;
+            audioPlayer.volume = currentVolume;
+            updateVolumeUI();
+        });
+    }
+
+    console.log('?? Zonorax Player inicializado');
 }

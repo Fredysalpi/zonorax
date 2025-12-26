@@ -228,6 +228,11 @@ async function loadArtists(page = 1, search = '') {
         // Configurar autocompletado de artistas
         setupArtistAutocomplete(data.artists);
 
+        // Configurar sistema de artistas colaboradores (ft.)
+        if (typeof setupFtArtists === 'function') {
+            setupFtArtists(data.artists);
+        }
+
         // Renderizar paginación
         renderPagination('artists', data.page, data.totalPages);
 
@@ -245,16 +250,22 @@ function setupArtistAutocomplete(artists) {
     if (!searchInput) return;
 
     searchInput.addEventListener('input', (e) => {
-        const query = e.target.value.toLowerCase().trim();
+        const fullValue = e.target.value;
+
+        // IMPORTANTE: Sincronizar el valor con el campo hidden
+        // Esto permite que los IDs escritos directamente se guarden
+        hiddenInput.value = fullValue;
+
+        const lastCommaIndex = fullValue.lastIndexOf(',');
+        const query = (lastCommaIndex !== -1 ? fullValue.substring(lastCommaIndex + 1) : fullValue).toLowerCase().trim();
 
         if (query.length === 0) {
             suggestionsDiv.style.display = 'none';
-            hiddenInput.value = '';
             return;
         }
 
         const filtered = artists.filter(artist =>
-            artist.name.toLowerCase().includes(query)
+            artist.name.toLowerCase().includes(query) || artist.id.toString().includes(query)
         );
 
         if (filtered.length === 0) {
@@ -277,8 +288,22 @@ function setupArtistAutocomplete(artists) {
             item.addEventListener('click', () => {
                 const artistId = item.dataset.id;
                 const artistName = item.dataset.name;
-                searchInput.value = artistName;
-                hiddenInput.value = artistId;
+
+                // Obtener el valor actual del campo hidden
+                const currentIds = hiddenInput.value.trim();
+                const currentIdsArray = currentIds ? currentIds.split(',').map(id => id.trim()) : [];
+
+                // Agregar el nuevo ID si no existe ya
+                if (!currentIdsArray.includes(artistId)) {
+                    currentIdsArray.push(artistId);
+                }
+
+                // Actualizar el campo hidden con los IDs separados por coma
+                hiddenInput.value = currentIdsArray.join(', ');
+
+                // Actualizar el campo visible con los IDs también
+                searchInput.value = currentIdsArray.join(', ');
+
                 suggestionsDiv.style.display = 'none';
             });
         });
@@ -464,9 +489,14 @@ function openSongModal(songId = null) {
     document.getElementById('song-modal-title').textContent = 'Nueva Canción';
     document.getElementById('upload-progress').style.display = 'none';
 
-    // Limpiar campo de artista
+    // Limpiar campo de artista principal
     document.getElementById('song-artist-search').value = '';
     document.getElementById('song-artist').value = '';
+
+    // Limpiar artistas colaboradores
+    if (typeof window.clearFtArtists === 'function') {
+        window.clearFtArtists();
+    }
 
     if (songId) {
         document.getElementById('song-modal-title').textContent = 'Editar Canción';
@@ -490,10 +520,26 @@ async function loadSongData(songId) {
             document.getElementById('song-id').value = song.id;
             document.getElementById('song-title').value = song.title || '';
 
-            // Configurar artista
-            if (song.artist_name) {
-                document.getElementById('song-artist-search').value = song.artist_name;
-                document.getElementById('song-artist').value = song.artist_id;
+            // Obtener la lista de artistas para el autocompletado
+            const artistsResponse = await fetch(`${API_BASE_URL}/admin/artists?page=1&limit=1000&search=`, {
+                headers: {
+                    'Authorization': `Bearer ${authToken}`
+                }
+            });
+            const artistsData = await artistsResponse.json();
+
+            // Cargar artista principal
+            if (song.artist_id) {
+                const mainArtist = artistsData.artists.find(a => a.id === song.artist_id);
+                if (mainArtist) {
+                    document.getElementById('song-artist-search').value = mainArtist.name;
+                    document.getElementById('song-artist').value = mainArtist.id;
+                }
+            }
+
+            // Cargar artistas colaboradores (ft.)
+            if (song.ft_artists && typeof window.loadExistingFtArtists === 'function') {
+                window.loadExistingFtArtists(song.ft_artists, artistsData.artists);
             }
 
             // Convertir duración de segundos a mm:ss

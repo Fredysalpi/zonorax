@@ -1,0 +1,152 @@
+/* Ellipsis para títulos en la página principal (Lanzamientos) */
+.featured-card-title,
+.release-card .featured-card-title,
+#releases-grid .featured-card-title {
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    max-width: 100% !important;
+    line-height: 1.4 !important;
+    min-height: 1.4em !important;
+    max-height: 1.4em !important;
+    display: block !important;
+}
+
+/* Asegurar que las release cards mantengan su tamaño */
+.release-card,
+#releases-grid .release-card {
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+.release-card .featured-card-subtitle,
+#releases-grid .featured-card-subtitle {
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    max-width: 100% !important;
+    display: block !important;
+}
+
+/* Animación marquesina para mini player y fullscreen player */
+@keyframes marquee {
+    0% {
+        transform: translateX(0%);
+    }
+
+    100% {
+        transform: translateX(-50%);
+    }
+}
+
+/* Animación más lenta para fullscreen */
+@keyframes marquee-slow {
+    0% {
+        transform: translateX(0%);
+    }
+
+    100% {
+        transform: translateX(-50%);
+    }
+}
+
+.marquee-container {
+    overflow: hidden;
+    position: relative;
+    width: 100%;
+}
+
+.marquee-text {
+    display: inline-block;
+    white-space: nowrap;
+    animation: marquee 10s linear infinite;
+}
+
+.marquee-text:hover {
+    animation-play-state: paused;
+}
+
+/* Solo animar si el texto es más largo que el contenedor */
+.marquee-text.should-animate {
+    animation: marquee 10s linear infinite;
+}
+
+.marquee-text:not(.should-animate) {
+    animation: none;
+}
+
+/* Estilos específicos para el mini player móvil */
+#mobile-song-title {
+    overflow: hidden;
+    position: relative;
+    width: 100%;
+}
+
+/* Estilos específicos para el fullscreen player - MÁS LENTO */
+#fullscreen-song-title {
+    overflow: hidden;
+    position: relative;
+    width: 100%;
+}
+
+#fullscreen-song-title .marquee-text.should-animate {
+    animation: marquee-slow 15s linear infinite;
+}
+
+/* Estilos para el reproductor desktop - SOLO EN DESKTOP */
+@media (min-width: 769px) {
+    #player-song-title {
+        text-decoration: none !important;
+        max-width: 180px !important;
+        overflow: hidden !important;
+        white-space: nowrap !important;
+    }
+
+    #player-song-title:hover,
+    #player-song-title:hover .marquee-text {
+        text-decoration: none !important;
+    }
+
+    /* Animación para el título del player desktop */
+    #player-song-title .marquee-text.should-animate {
+        animation: marquee 10s linear infinite !important;
+    }
+
+    .player-bar .song-title {
+        text-decoration: none !important;
+        overflow: hidden !important;
+        white-space: nowrap !important;
+    }
+
+    .player-bar .song-title:hover {
+        text-decoration: none !important;
+    }
+
+    /* Quitar subrayado del artista */
+    .song-artist,
+    .song-artist span,
+    #player-artist {
+        text-decoration: none !important;
+    }
+
+    .song-artist:hover,
+    .song-artist span:hover,
+    #player-artist:hover {
+        text-decoration: none !important;
+        border-bottom: none !important;
+    }
+}
+
+/* Scroll invisible para el sidebar derecho */
+.sidebar-right {
+    overflow-y: auto !important;
+    scrollbar-width: none;
+    /* Firefox */
+    -ms-overflow-style: none;
+    /* IE y Edge */
+}
+
+.sidebar-right::-webkit-scrollbar {
+    display: none;
+    /* Chrome, Safari y Opera */
+}
